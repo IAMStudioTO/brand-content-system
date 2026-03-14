@@ -10,7 +10,8 @@ const { addSvgAsset, setSvgAssetActivation } = require('./services/svg-library')
 const state = {
   contents: new Map(),
   exports: new Map(),
-  contentOrder: []
+  contentOrder: [],
+  versions: new Map()
 };
 
 function sendJson(res, status, payload) {
@@ -72,6 +73,18 @@ function cloneContent(content, nextId) {
 }
 
 
+
+
+function cloneDeep(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getContentVersions(contentId) {
+  if (!state.versions.has(contentId)) {
+    state.versions.set(contentId, []);
+  }
+  return state.versions.get(contentId);
+}
 
 function applySvgUpdatesToVariant(variant, updates = []) {
   const next = JSON.parse(JSON.stringify(variant));
@@ -247,6 +260,54 @@ async function handler(req, res) {
     return sendJson(res, 200, { items });
   }
 
+  const createVersionMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/versions$/);
+  if (req.method === 'POST' && createVersionMatch) {
+    try {
+      const content = getContentOr404(createVersionMatch[1], res);
+      if (!content) return;
+
+      const body = await parseBody(req);
+      const name = String(body?.name || '').trim();
+      if (!name) {
+        return sendJson(res, 400, { error: '400_VERSION_NAME_REQUIRED' });
+      }
+
+      const versions = getContentVersions(createVersionMatch[1]);
+      const version = {
+        id: generateId('ver'),
+        name,
+        createdAt: new Date().toISOString(),
+        selectedVariant: content.selectedVariant,
+        data: cloneDeep(content)
+      };
+      versions.unshift(version);
+
+      return sendJson(res, 201, {
+        versionId: version.id,
+        name: version.name,
+        createdAt: version.createdAt,
+        selectedVariant: version.selectedVariant
+      });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
+  }
+
+  const listVersionsMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/versions$/);
+  if (req.method === 'GET' && listVersionsMatch) {
+    const content = getContentOr404(listVersionsMatch[1], res);
+    if (!content) return;
+
+    const versions = getContentVersions(listVersionsMatch[1]).map((v) => ({
+      id: v.id,
+      name: v.name,
+      createdAt: v.createdAt,
+      selectedVariant: v.selectedVariant
+    }));
+
+    return sendJson(res, 200, { items: versions });
+  }
+
   const duplicateContentMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/duplicate$/);
   if (req.method === 'POST' && duplicateContentMatch) {
     const content = getContentOr404(duplicateContentMatch[1], res);
@@ -266,6 +327,7 @@ async function handler(req, res) {
     if (!content) return;
 
     state.contents.delete(deleteContentMatch[1]);
+    state.versions.delete(deleteContentMatch[1]);
     state.contentOrder = state.contentOrder.filter((id) => id !== deleteContentMatch[1]);
     return sendJson(res, 200, { deleted: true, contentId: deleteContentMatch[1] });
   }

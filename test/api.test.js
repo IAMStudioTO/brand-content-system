@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + list + variant-select + text/svg-edit + preview + export + duplicate + delete flow', async () => {
+test('API generate + get + list + variant-select + text/svg-edit + preview + export + versions + duplicate + delete flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -150,6 +150,36 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
     assert.equal(exportedPayload.status, 200);
     assert.equal(exportedPayload.body.variants.length, 3);
 
+    const createdVersion = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/versions`,
+      body: { name: 'Versione dopo editing' }
+    });
+
+    assert.equal(createdVersion.status, 201);
+    assert.ok(createdVersion.body.versionId);
+
+    const versions = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/versions`
+    });
+
+    assert.equal(versions.status, 200);
+    assert.equal(versions.body.items.length, 1);
+    assert.equal(versions.body.items[0].name, 'Versione dopo editing');
+
+    const invalidVersion = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/versions`,
+      body: { name: '   ' }
+    });
+
+    assert.equal(invalidVersion.status, 400);
+    assert.equal(invalidVersion.body.error, '400_VERSION_NAME_REQUIRED');
+
     const invalidVariant = await requestJson({
       method: 'PATCH',
       port,
@@ -231,6 +261,14 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
     });
 
     assert.equal(getDeleted.status, 404);
+
+    const versionsAfterDelete = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/versions`
+    });
+
+    assert.equal(versionsAfterDelete.status, 404);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
