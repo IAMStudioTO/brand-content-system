@@ -504,6 +504,27 @@ async function handler(req, res) {
     return sendJson(res, 200, { deleted: true, contentId: deleteContentMatch[1], deletedAt: content.deletedAt });
   }
 
+  const restoreDeletedMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/restore$/);
+  if (req.method === 'POST' && restoreDeletedMatch) {
+    try {
+      const content = state.contents.get(restoreDeletedMatch[1]);
+      if (!content) return sendJson(res, 404, { error: 'Not found' });
+
+      const body = await parseBody(req);
+      const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
+      if (!content.deletedAt) {
+        return sendJson(res, 409, { error: '409_CONTENT_NOT_DELETED' });
+      }
+
+      content.deletedAt = null;
+      return sendJson(res, 200, { restored: true, contentId: content.id });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
+  }
+
   const selectVariantMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/variant$/);
   if (req.method === 'PATCH' && selectVariantMatch) {
     try {

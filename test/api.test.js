@@ -384,6 +384,7 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     assert.equal(deleted.status, 200);
     assert.equal(deleted.body.deleted, true);
     assert.ok(deleted.body.deletedAt);
+    assert.ok(deleted.body.deletedAt);
 
     const getDeleted = await requestJson({
       method: 'GET',
@@ -826,6 +827,74 @@ test('Client generate validation returns 400_GENERATE_REQUEST_INVALID', async ()
 
     assert.equal(missingWorkspace.status, 400);
     assert.equal(missingWorkspace.body.error, '400_GENERATE_REQUEST_INVALID');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+
+test('Soft-delete restore lifecycle for content', async () => {
+  const server = startServer(0);
+  const port = server.address().port;
+
+  try {
+    const generation = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/client/content/generate',
+      body: {
+        workspaceId: 'ws_acme',
+        prompt: 'Crea un post singolo soft delete test'
+      }
+    });
+
+    assert.equal(generation.status, 200);
+
+    const deleted = await requestJson({
+      method: 'DELETE',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}?workspaceId=ws_acme`
+    });
+
+    assert.equal(deleted.status, 200);
+    assert.equal(deleted.body.deleted, true);
+    assert.ok(deleted.body.deletedAt);
+
+    const exportAfterDelete = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/export?workspaceId=ws_acme`
+    });
+
+    assert.equal(exportAfterDelete.status, 404);
+
+    const restore = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/restore`,
+      body: { workspaceId: 'ws_acme' }
+    });
+
+    assert.equal(restore.status, 200);
+    assert.equal(restore.body.restored, true);
+
+    const getRestored = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}`
+    });
+
+    assert.equal(getRestored.status, 200);
+
+    const restoreConflict = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/restore`,
+      body: { workspaceId: 'ws_acme' }
+    });
+
+    assert.equal(restoreConflict.status, 409);
+    assert.equal(restoreConflict.body.error, '409_CONTENT_NOT_DELETED');
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
