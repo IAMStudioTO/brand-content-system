@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + preview + export flow', async () => {
+test('API generate + get + variant-select + preview + export flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -65,6 +65,16 @@ test('API generate + get + preview + export flow', async () => {
     assert.equal(getContent.status, 200);
     assert.equal(getContent.body.variants.length, 3);
 
+    const selectVariant = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/variant`,
+      body: { variantIndex: 2 }
+    });
+
+    assert.equal(selectVariant.status, 200);
+    assert.equal(selectVariant.body.selectedVariant, 2);
+
     const preview = await requestJson({
       method: 'GET',
       port,
@@ -91,6 +101,16 @@ test('API generate + get + preview + export flow', async () => {
 
     assert.equal(exportedPayload.status, 200);
     assert.equal(exportedPayload.body.variants.length, 3);
+
+    const invalidVariant = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/variant`,
+      body: { variantIndex: 8 }
+    });
+
+    assert.equal(invalidVariant.status, 422);
+    assert.equal(invalidVariant.body.error, '422_VARIANT_INDEX_OUT_OF_RANGE');
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

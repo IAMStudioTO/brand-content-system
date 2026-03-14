@@ -55,6 +55,12 @@ function getContentOr404(contentId, res) {
   return content;
 }
 
+function parseVariantIndex(input) {
+  const index = Number.parseInt(input, 10);
+  if (!Number.isFinite(index) || index < 0) return null;
+  return index;
+}
+
 async function handler(req, res) {
   const requestUrl = parseRequestUrl(req);
   const path = requestUrl.pathname;
@@ -160,6 +166,31 @@ async function handler(req, res) {
     const content = getContentOr404(getContentMatch[1], res);
     if (!content) return;
     return sendJson(res, 200, content);
+  }
+
+  const selectVariantMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/variant$/);
+  if (req.method === 'PATCH' && selectVariantMatch) {
+    try {
+      const content = getContentOr404(selectVariantMatch[1], res);
+      if (!content) return;
+
+      const body = await parseBody(req);
+      const variantIndex = parseVariantIndex(body.variantIndex);
+      if (variantIndex === null) {
+        return sendJson(res, 400, { error: 'Invalid variantIndex' });
+      }
+      if (variantIndex >= content.variants.length) {
+        return sendJson(res, 422, { error: '422_VARIANT_INDEX_OUT_OF_RANGE' });
+      }
+
+      content.selectedVariant = variantIndex;
+      return sendJson(res, 200, {
+        selectedVariant: content.selectedVariant,
+        numberOfVariants: content.variants.length
+      });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
   }
 
   const previewMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/preview$/);

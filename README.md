@@ -21,6 +21,7 @@ Endpoint disponibili:
 ### Client
 - `POST /api/v1/client/content/generate` (supporto `variants` 1..3)
 - `GET /api/v1/client/content/:contentId`
+- `PATCH /api/v1/client/content/:contentId/variant` (selezione variante attiva)
 - `GET /api/v1/client/content/:contentId/preview`
 - `POST /api/v1/client/content/:contentId/export`
 - `GET /api/v1/client/exports/:exportId.json`
