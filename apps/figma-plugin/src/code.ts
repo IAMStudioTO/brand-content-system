@@ -3,31 +3,51 @@
 
 figma.showUI(__html__, { width: 420, height: 640 });
 
-function inferSemanticRole(layerName: string): string | null {
+type ParsedLayerName = {
+  semanticRole: string | null;
+  slotIndex: number | null;
+};
+
+function parseLayerName(layerName: string): ParsedLayerName {
   const name = layerName.trim().toLowerCase();
 
-  if (name === "headline") return "headline";
-  if (name === "body") return "body";
-  if (name === "image") return "image";
-  if (name === "background") return "background";
+  const exactRoles = ["headline", "body", "background"] as const;
+  for (const role of exactRoles) {
+    if (name === role) {
+      return { semanticRole: role, slotIndex: null };
+    }
+  }
 
-  return null;
+  const indexedMatch = name.match(/^(image|logo|cta|component|decoration)_(\d+)$/);
+  if (indexedMatch) {
+    return {
+      semanticRole: indexedMatch[1],
+      slotIndex: Number(indexedMatch[2])
+    };
+  }
+
+  return { semanticRole: null, slotIndex: null };
 }
 
 function extractLayers(node: SceneNode): any[] {
   if (!("children" in node)) return [];
 
-  return node.children.map((child, index) => ({
-    name: child.name,
-    semanticRole: inferSemanticRole(child.name),
-    type: child.type,
-    x: child.x,
-    y: child.y,
-    width: child.width,
-    height: child.height,
-    visible: child.visible,
-    zIndex: index
-  }));
+  return node.children.map((child, index) => {
+    const parsed = parseLayerName(child.name);
+
+    return {
+      name: child.name,
+      semanticRole: parsed.semanticRole,
+      slotIndex: parsed.slotIndex,
+      type: child.type,
+      x: child.x,
+      y: child.y,
+      width: child.width,
+      height: child.height,
+      visible: child.visible,
+      zIndex: index
+    };
+  });
 }
 
 figma.ui.onmessage = async (msg) => {
