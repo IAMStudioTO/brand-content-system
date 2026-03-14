@@ -1,0 +1,14 @@
+{
+  "name": "brand-content-system",
+  "version": "0.1.0",
+  "description": "Brand Content System V1 backend scaffold",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

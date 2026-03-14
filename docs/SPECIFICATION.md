@@ -1,91 +1,167 @@
-# Technical Specification for Brand Content System
+# Design Tool — Documento tecnico-funzionale (V1)
 
-## 1. Introduction
-   - Overview of the Brand Content System project and its objectives.
+Prodotto: **Brand Content System**
+Versione: **V1**
+Modello: **B2B Custom Premium**
 
-## 2. Project Background
-   - Historical context and motivation for the development of the B2B Premium Brand Content System.
+## 1) Obiettivo
+Questo documento definisce il comportamento del sistema da implementare per il MVP V1:
 
-## 3. Figma Plugin Architecture
-   - Information on the architecture used for integrating with Figma.
+1. Plugin Figma (solo sync)
+2. Web app (admin + client workspace)
+3. Motore AI vincolato
+4. Renderer visuale a composizione controllata
 
-## 4. AI Engine
-   - Description of the AI engine utilized in the project, including functionalities and technologies used.
+Il prodotto **non** è un editor grafico generalista. È un **Brand Content System** per aziende che vogliono produrre contenuti coerenti senza reparto creativo interno.
 
-## 5. SVG System
-   - Explanation of the SVG handling and manipulation approach.
+## 2) Visione prodotto
+- Ogni cliente ha un workspace dedicato.
+- I template sono progettati internamente dal designer/admin in Figma.
+- Il cliente non disegna: fornisce un brief testuale all’AI.
+- L’AI propone strutture e contenuti **entro vincoli definiti** (template/slot/regole).
+- Output: singolo visual o carosello multi-slide, brand-consistent.
 
-## 6. Template Composition
-   - Details on the template creation, management, and rendering.
+## 3) Unità di composizione
+L’unità base è la **slide**:
+- Single content = 1 slide
+- Carousel/deck = N slide
 
-## 7. MVP Objectives
-   - Definition of the Minimum Viable Product objectives and features.
+Conseguenza: progettare **slide template modulari**, non “template carosello monolitici”.
 
-## 8. User Roles
-   - Description of the different user roles in the system and their permissions.
+## 4) Scope V1
+### Incluso
+- Formato primario: **LinkedIn vertical 1080x1350**
+- Setup brand per 1+ clienti
+- Fino a 5 template master per cliente
+- Libreria SVG modulare per cliente
+- Generazione AI: single + carousel
+- Anteprima + export
 
-## 9. Workflow
-   - Detailed breakdown of user workflows within the system.
+### Escluso
+- Editor libero tipo Canva
+- Upload SVG da parte del cliente
+- Drag&drop avanzato
+- Multi-formato esteso
+- Collaboration realtime
+- Generazione design libera fuori vincoli
 
-## 10. System Requirements
-   - Hardware and software requirements necessary for system functionality.
+## 5) Regole fondanti
+1. Solo 3 famiglie di elementi runtime:
+   - `text`
+   - `image`
+   - `svg`
+2. Tutta la grafica non testuale/non fotografica deve arrivare come SVG pronto.
+3. L’AI non inventa layout: seleziona combinazioni valide.
+4. Compatibilità tra slot/template/asset obbligatoria.
 
-## 11. User Interface Design
-   - Key UI design principles and methodologies used.
+## 6) Figma design contract
+Nei frame template Figma usare naming semantico obbligatorio:
+- `text/...`
+- `image/...`
+- `svg/...`
 
-## 12. Data Management
-   - Overview of data storage, retrieval, and management strategies.
+Esempi:
+- `text/headline`
+- `text/subtitle`
+- `image/hero`
+- `svg/background_main`
+- `svg/decor_top_right`
 
-## 13. Integration with External Systems
-   - Description of integration points with other systems and services.
+Naming non semantico (es. `Rectangle 51`) è invalido per la pipeline.
 
-## 14. Security Considerations
-   - Security measures and protocols implemented in the system.
+## 7) Fasi operative
+1. **Setup cliente (admin/designer)**
+   - Crea workspace cliente
+   - Carica brand pack
+   - Definisce template, slot e regole
+   - Carica libreria SVG
+2. **Sync da Figma**
+   - Plugin legge frame selezionato
+   - Esporta SVG
+   - Invia metadati template+layer alla web app
+3. **Uso cliente**
+   - Inserisce prompt/brief
+4. **Orchestrazione AI**
+   - Classifica single vs carousel
+   - Definisce narrativa slide-by-slide
+   - Seleziona template + SVG compatibili
+   - Compila testi entro limiti
+5. **Render**
+   - Composizione con coordinate e z-index
+6. **Output**
+   - 1+ varianti + export finale
 
-## 15. Testing Strategy
-   - Outline of the testing methodologies employed during the development phase.
+## 8) Template model (V1)
+Ogni template deve includere:
+- Canvas (`width`, `height`, `format`)
+- Text slots
+- Image slots
+- SVG slots
+- Layer order / z-index
+- Regole di compatibilità
+- Limiti copy (es. max chars)
 
-## 16. Performance Metrics
-   - Definition of performance measurement criteria and benchmarks.
+Target iniziale consigliato per cliente:
+- max 5 template master
 
-## 17. Accessibility Considerations
-   - Strategies adopted to ensure accessibility compliance.
+## 9) SVG system (V1)
+### Categorie consigliate
+- `background`
+- `decorative`
+- `accent`
+- `frame`
 
-## 18. Documentation
-   - Overview of project documentation and its structure.
+### Metadati minimi SVG
+- `category`
+- `compatibleSlots[]`
+- `compatibleTemplates[]`
+- `weight` (light/medium/bold)
+- `scaleMin` / `scaleMax`
+- `typicalZIndex`
+- `styleTag`
 
-## 19. Deployment Plan
-   - Steps and strategies for deploying the system to production.
+### Regola qualità asset
+Gli SVG devono essere intercambiabili senza rompere layout:
+- coerenza stile
+- coerenza ingombri
+- coerenza peso visivo
 
-## 20. Maintenance and Support
-   - Guidelines for maintaining the system post-launch.
+## 10) AI contract (output strutturato)
+L’AI deve restituire **solo JSON** conforme a schema applicativo.
 
-## 21. User Feedback Mechanisms
-   - Methods implemented for gathering user feedback.
+Campi obbligatori:
+- `contentMode`: `single | carousel`
+- `numberOfSlides`
+- `slides[]`
+  - `role`
+  - `templateId`
+  - `textAssignments`
+  - `svgAssignments`
+  - `imageRequirements`
+  - `cta`
 
-## 22. Change Management
-   - Processes for managing changes to the project scope and deliverables.
+L’AI può usare esclusivamente template/slot/asset permessi nel workspace.
 
-## 23. Licensing Information
-   - Licensing and usage terms for the system.
+## 11) Esempio payload di slide generata
+```json
+{
+  "role": "cover",
+  "templateId": "template_cover_01",
+  "textAssignments": {
+    "headline": "Il tuo brand non è un logo",
+    "subtitle": "È il sistema che rende riconoscibile ogni contenuto"
+  },
+  "svgAssignments": {
+    "background_main": "svg_bg_01",
+    "decor_top_right": "svg_decor_03",
+    "accent_bottom": "svg_accent_02"
+  },
+  "imageRequirements": [],
+  "cta": false
+}
+```
 
-## 24. References
-   - Citation of important resources and documentation used in the project.
+## 12) Outcome MVP
+Validare la promessa:
 
-## 25. Future Considerations
-   - Potential features and improvements for future versions.
-
-## 26. Glossary
-   - Definitions of key terms and acronyms used throughout the document.
-
-## 27. Project Timeline
-   - Overview of milestones and timelines associated with the project.
-
-## 28. Risk Management
-   - Identification of potential risks and their mitigation strategies.
-
-## 29. Stakeholders
-   - List of key stakeholders involved in the project and their roles.
-
-## 30. Conclusion
-   - Final thoughts and wrap-up of the technical specification.
+> “Un’azienda senza reparto creativo può generare contenuti brandizzati coerenti parlando con un’AI, dentro un sistema visuale progettato da un designer.”
