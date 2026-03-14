@@ -106,7 +106,7 @@ export default function Home() {
             <div className="flex flex-col gap-3">
               {items.map((item) => (
                 <div key={item.id} className="rounded-xl border p-4">
-                  <p><strong>ID:</strong> {item.id}</p>
+                  <p><strong>ID:</strong> <a className="underline" href={`/content/${item.id}`}>{item.id}</a></p>
                   <p><strong>Modalità:</strong> {item.contentMode}</p>
                   <p><strong>Slide:</strong> {item.numberOfSlides}</p>
                   <p><strong>Varianti:</strong> {item.numberOfVariants}</p>

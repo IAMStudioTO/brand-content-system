@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Brand Content System</title>
+    <style>
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        margin: 0;
+        padding: 16px;
+        background: #111;
+        color: #f5f5f5;
+      }
+      .wrap { display: flex; flex-direction: column; gap: 12px; }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        cursor: pointer;
+      }
+      .primary { background: #c6923d; color: #111; font-weight: 600; }
+      .secondary { background: #2a2a2a; color: #f5f5f5; }
+      pre {
+        background: #1d1d1d;
+        padding: 12px;
+        border-radius: 8px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h2>Brand Content System</h2>
+      <p>Plugin MVP per leggere la selezione corrente in Figma.</p>
+      <button id="scan" class="primary">Leggi selezione</button>
+      <button id="close" class="secondary">Chiudi</button>
+      <pre id="output">Nessun dato ancora.</pre>
+    </div>
+
+    <script>
+      const output = document.getElementById("output");
+      document.getElementById("scan").onclick = () => {
+        parent.postMessage({ pluginMessage: { type: "GET_SELECTION" } }, "*");
+      };
+      document.getElementById("close").onclick = () => {
+        parent.postMessage({ pluginMessage: { type: "CLOSE" } }, "*");
+      };
+      window.onmessage = (event) => {
+        const msg = event.data.pluginMessage;
+        if (!msg) return;
+        output.textContent = JSON.stringify(msg, null, 2);
+      };
+    </script>
+  </body>
+</html>

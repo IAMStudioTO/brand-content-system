@@ -1,0 +1,12 @@
+{
+  "name": "brand-content-system-figma-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc && node scripts/bundle-ui.js"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.117.0",
+    "typescript": "^5.9.2"
+  }
+}

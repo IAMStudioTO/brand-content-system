@@ -1,0 +1,4 @@
+node_modules
+apps/figma-plugin/node_modules
+dist
+apps/figma-plugin/dist
