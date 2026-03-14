@@ -1,52 +1,68 @@
-figma.showUI(__html__, { width: 420, height: 640 });
+// Brand Content System — Figma Plugin
+// Main thread: accesso alla Figma Plugin API
 
-type SyncPayload = {
-  frameName: string;
-  width: number;
-  height: number;
-  layerCount: number;
-};
+figma.showUI(__html__, { width: 420, height: 520 });
 
-function collectSelection(): SyncPayload | null {
-  const node = figma.currentPage.selection[0];
-  if (!node) return null;
+function extractLayers(node: SceneNode): any[] {
+  if (!("children" in node)) return [];
 
-  if (node.type !== "FRAME" && node.type !== "COMPONENT" && node.type !== "INSTANCE") {
-    return null;
-  }
-
-  const frame = node as FrameNode | ComponentNode | InstanceNode;
-
-  return {
-    frameName: frame.name,
-    width: Math.round(frame.width),
-    height: Math.round(frame.height),
-    layerCount: "children" in frame ? frame.children.length : 0
-  };
+  return node.children.map((child, index) => ({
+    name: child.name,
+    type: child.type,
+    x: child.x,
+    y: child.y,
+    width: child.width,
+    height: child.height,
+    visible: child.visible,
+    zIndex: index
+  }));
 }
 
 figma.ui.onmessage = async (msg) => {
-  if (msg.type === "GET_SELECTION") {
-    const payload = collectSelection();
 
-    if (!payload) {
+  if (msg.type === "READ_SELECTION") {
+
+    const selection = figma.currentPage.selection;
+
+    if (!selection || selection.length === 0) {
       figma.ui.postMessage({
         type: "SELECTION_RESULT",
         ok: false,
-        error: "Seleziona un Frame, Component o Instance in Figma."
+        error: "Seleziona un frame o componente"
       });
       return;
     }
 
+    const node = selection[0];
+
+    if (node.type !== "FRAME" && node.type !== "COMPONENT") {
+      figma.ui.postMessage({
+        type: "SELECTION_RESULT",
+        ok: false,
+        error: "Seleziona un FRAME o COMPONENT"
+      });
+      return;
+    }
+
+    const frame = node as FrameNode | ComponentNode;
+
+    const layers = extractLayers(frame);
+
     figma.ui.postMessage({
       type: "SELECTION_RESULT",
       ok: true,
-      payload
+      payload: {
+        frameName: frame.name,
+        width: frame.width,
+        height: frame.height,
+        layerCount: layers.length,
+        layers
+      }
     });
-    return;
   }
 
-  if (msg.type === "CLOSE") {
+  if (msg.type === "CLOSE_PLUGIN") {
     figma.closePlugin();
   }
+
 };
