@@ -2,11 +2,24 @@
 // Brand Content System — Figma Plugin
 // Main thread: accesso alla Figma Plugin API
 figma.showUI(__html__, { width: 420, height: 640 });
+function inferSemanticRole(layerName) {
+    const name = layerName.trim().toLowerCase();
+    if (name === "headline")
+        return "headline";
+    if (name === "body")
+        return "body";
+    if (name === "image")
+        return "image";
+    if (name === "background")
+        return "background";
+    return null;
+}
 function extractLayers(node) {
     if (!("children" in node))
         return [];
     return node.children.map((child, index) => ({
         name: child.name,
+        semanticRole: inferSemanticRole(child.name),
         type: child.type,
         x: child.x,
         y: child.y,
