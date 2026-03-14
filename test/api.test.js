@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + list + variant-select + text-edit + preview + export + duplicate + delete flow', async () => {
+test('API generate + get + list + variant-select + text/svg-edit + preview + export + duplicate + delete flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -104,6 +104,24 @@ test('API generate + get + list + variant-select + text-edit + preview + export 
     assert.equal(textUpdate.status, 200);
     assert.equal(textUpdate.body.selectedVariant, 2);
 
+    const svgUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/svg`,
+      body: {
+        updates: [
+          {
+            slideIndex: 0,
+            svgAssignments: {
+              accent_bottom: 'svg_accent_02'
+            }
+          }
+        ]
+      }
+    });
+
+    assert.equal(svgUpdate.status, 200);
+
     const preview = await requestJson({
       method: 'GET',
       port,
@@ -158,6 +176,25 @@ test('API generate + get + list + variant-select + text-edit + preview + export 
 
     assert.equal(invalidTextUpdate.status, 422);
     assert.equal(invalidTextUpdate.body.error, '422_SLIDE_INDEX_INVALID');
+
+    const invalidSvgUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/svg`,
+      body: {
+        updates: [
+          {
+            slideIndex: 0,
+            svgAssignments: {
+              unknown_slot: 'svg_bg_01'
+            }
+          }
+        ]
+      }
+    });
+
+    assert.equal(invalidSvgUpdate.status, 422);
+    assert.equal(invalidSvgUpdate.body.error, '422_SLOT_ASSIGNMENT_INVALID');
 
     const duplicated = await requestJson({
       method: 'POST',
