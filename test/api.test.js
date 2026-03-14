@@ -383,6 +383,7 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(deleted.status, 200);
     assert.equal(deleted.body.deleted, true);
+    assert.ok(deleted.body.deletedAt);
 
     const getDeleted = await requestJson({
       method: 'GET',
@@ -391,6 +392,15 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     });
 
     assert.equal(getDeleted.status, 404);
+
+    const listAfterDelete = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/client/contents?workspaceId=ws_acme'
+    });
+
+    assert.equal(listAfterDelete.status, 200);
+    assert.ok(!listAfterDelete.body.items.find((item) => item.id === generation.body.contentId));
 
     const versionsAfterDelete = await requestJson({
       method: 'GET',

@@ -32,7 +32,7 @@ Endpoint disponibili:
 - `PATCH /api/v1/client/content/:contentId/image` (editing image requirements controllato sulla variante attiva)
 - `GET /api/v1/client/content/:contentId/preview`
 - `POST /api/v1/client/content/:contentId/duplicate`
-- `DELETE /api/v1/client/content/:contentId`
+- `DELETE /api/v1/client/content/:contentId` (soft-delete)
 - `POST /api/v1/client/content/:contentId/export`
 - `GET /api/v1/client/exports/:exportId.json`
 - `POST /api/v1/client/content/:contentId/versions` (snapshot versione)

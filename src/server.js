@@ -51,7 +51,7 @@ function parseRequestUrl(req) {
 
 function getContentOr404(contentId, res) {
   const content = state.contents.get(contentId);
-  if (!content) {
+  if (!content || content.deletedAt) {
     sendJson(res, 404, { error: 'Not found' });
     return null;
   }
@@ -386,7 +386,7 @@ async function handler(req, res) {
 
     const items = state.contentOrder
       .map((id) => state.contents.get(id))
-      .filter((content) => content && content.workspaceId === workspaceId)
+      .filter((content) => content && !content.deletedAt && content.workspaceId === workspaceId)
       .map((content) => ({
         id: content.id,
         createdAt: content.createdAt,
@@ -497,10 +497,8 @@ async function handler(req, res) {
     const content = getContentOr404(deleteContentMatch[1], res);
     if (!content) return;
 
-    state.contents.delete(deleteContentMatch[1]);
-    state.versions.delete(deleteContentMatch[1]);
-    state.contentOrder = state.contentOrder.filter((id) => id !== deleteContentMatch[1]);
-    return sendJson(res, 200, { deleted: true, contentId: deleteContentMatch[1] });
+    content.deletedAt = new Date().toISOString();
+    return sendJson(res, 200, { deleted: true, contentId: deleteContentMatch[1], deletedAt: content.deletedAt });
   }
 
   const selectVariantMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/variant$/);
