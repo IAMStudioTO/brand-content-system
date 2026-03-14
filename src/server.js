@@ -501,7 +501,13 @@ async function handler(req, res) {
     if (!content) return;
 
     content.deletedAt = new Date().toISOString();
-    return sendJson(res, 200, { deleted: true, contentId: deleteContentMatch[1], deletedAt: content.deletedAt });
+    state.contentOrder = state.contentOrder.filter((id) => id !== content.id);
+
+    return sendJson(res, 200, {
+      deleted: true,
+      contentId: deleteContentMatch[1],
+      deletedAt: content.deletedAt
+    });
   }
 
   const restoreDeletedMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/restore$/);
@@ -512,13 +518,19 @@ async function handler(req, res) {
 
       const body = await parseBody(req);
       const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
-      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+      if (!accessWorkspaceId || accessWorkspaceId !== content.workspaceId) {
+        return sendJson(res, 403, { error: '403_WORKSPACE_ACCESS_DENIED' });
+      }
 
       if (!content.deletedAt) {
         return sendJson(res, 409, { error: '409_CONTENT_NOT_DELETED' });
       }
 
       content.deletedAt = null;
+      if (!state.contentOrder.includes(content.id)) {
+        state.contentOrder.unshift(content.id);
+      }
+
       return sendJson(res, 200, { restored: true, contentId: content.id });
     } catch (error) {
       return sendJson(res, 400, { error: error.message });

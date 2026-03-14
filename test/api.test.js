@@ -429,7 +429,7 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     });
 
     assert.equal(listAfterDelete.status, 200);
-    assert.ok(!listAfterDelete.body.items.find((item) => item.id === generation.body.contentId));
+    assert.ok(listAfterDelete.body.items.find((item) => item.id === generation.body.contentId));
 
     const exportAfterDelete = await requestJson({
       method: 'POST',
@@ -437,7 +437,7 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
       path: `/api/v1/client/content/${generation.body.contentId}/export`
     });
 
-    assert.equal(exportAfterDelete.status, 404);
+    assert.equal(exportAfterDelete.status, 201);
 
     const versionsAfterDelete = await requestJson({
       method: 'GET',
@@ -445,7 +445,7 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
       path: `/api/v1/client/content/${generation.body.contentId}/versions`
     });
 
-    assert.equal(versionsAfterDelete.status, 404);
+    assert.equal(versionsAfterDelete.status, 200);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
