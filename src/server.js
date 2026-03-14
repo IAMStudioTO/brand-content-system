@@ -71,6 +71,29 @@ function cloneContent(content, nextId) {
   };
 }
 
+
+function applyTextUpdatesToVariant(variant, updates = []) {
+  const next = JSON.parse(JSON.stringify(variant));
+
+  for (const update of updates) {
+    const slideIndex = Number.parseInt(update?.slideIndex, 10);
+    if (!Number.isFinite(slideIndex) || slideIndex < 0 || slideIndex >= next.slides.length) {
+      return { ok: false, code: '422_SLIDE_INDEX_INVALID' };
+    }
+
+    if (!update || typeof update.textAssignments !== 'object' || Array.isArray(update.textAssignments)) {
+      return { ok: false, code: '400_TEXT_UPDATES_INVALID' };
+    }
+
+    next.slides[slideIndex].textAssignments = {
+      ...next.slides[slideIndex].textAssignments,
+      ...update.textAssignments
+    };
+  }
+
+  return { ok: true, variant: next };
+}
+
 async function handler(req, res) {
   const requestUrl = parseRequestUrl(req);
   const path = requestUrl.pathname;
@@ -243,6 +266,44 @@ async function handler(req, res) {
       return sendJson(res, 200, {
         selectedVariant: content.selectedVariant,
         numberOfVariants: content.variants.length
+      });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
+  }
+
+  const updateTextMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/text$/);
+  if (req.method === 'PATCH' && updateTextMatch) {
+    try {
+      const content = getContentOr404(updateTextMatch[1], res);
+      if (!content) return;
+
+      const body = await parseBody(req);
+      if (!Array.isArray(body.updates) || body.updates.length < 1) {
+        return sendJson(res, 400, { error: '400_TEXT_UPDATES_INVALID' });
+      }
+
+      const selectedIndex = content.selectedVariant;
+      const selected = content.variants[selectedIndex] || content.variants[0];
+      const updated = applyTextUpdatesToVariant(selected, body.updates);
+      if (!updated.ok) {
+        const status = updated.code.startsWith('400_') ? 400 : 422;
+        return sendJson(res, status, { error: updated.code });
+      }
+
+      const validation = validateGeneratedContent(workspace, updated.variant);
+      if (!validation.ok) {
+        return sendJson(res, 422, { error: validation.code });
+      }
+
+      content.variants[selectedIndex] = updated.variant;
+      content.contentMode = updated.variant.contentMode;
+      content.numberOfSlides = updated.variant.numberOfSlides;
+      content.slides = updated.variant.slides;
+
+      return sendJson(res, 200, {
+        selectedVariant: selectedIndex,
+        slides: content.variants[selectedIndex].slides
       });
     } catch (error) {
       return sendJson(res, 400, { error: error.message });

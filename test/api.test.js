@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + list + variant-select + preview + export + duplicate + delete flow', async () => {
+test('API generate + get + list + variant-select + text-edit + preview + export + duplicate + delete flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -85,6 +85,25 @@ test('API generate + get + list + variant-select + preview + export + duplicate 
     assert.equal(selectVariant.status, 200);
     assert.equal(selectVariant.body.selectedVariant, 2);
 
+    const textUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/text`,
+      body: {
+        updates: [
+          {
+            slideIndex: 0,
+            textAssignments: {
+              headline: 'Nuova headline variante 3'
+            }
+          }
+        ]
+      }
+    });
+
+    assert.equal(textUpdate.status, 200);
+    assert.equal(textUpdate.body.selectedVariant, 2);
+
     const preview = await requestJson({
       method: 'GET',
       port,
@@ -93,6 +112,7 @@ test('API generate + get + list + variant-select + preview + export + duplicate 
 
     assert.equal(preview.status, 200);
     assert.equal(preview.body.slides.length, 5);
+    assert.equal(preview.body.slides[0].layers.text.headline, 'Nuova headline variante 3');
 
     const exported = await requestJson({
       method: 'POST',
@@ -121,6 +141,23 @@ test('API generate + get + list + variant-select + preview + export + duplicate 
 
     assert.equal(invalidVariant.status, 422);
     assert.equal(invalidVariant.body.error, '422_VARIANT_INDEX_OUT_OF_RANGE');
+
+    const invalidTextUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/text`,
+      body: {
+        updates: [
+          {
+            slideIndex: 99,
+            textAssignments: { headline: 'X' }
+          }
+        ]
+      }
+    });
+
+    assert.equal(invalidTextUpdate.status, 422);
+    assert.equal(invalidTextUpdate.body.error, '422_SLIDE_INDEX_INVALID');
 
     const duplicated = await requestJson({
       method: 'POST',

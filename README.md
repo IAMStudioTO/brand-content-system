@@ -23,6 +23,7 @@ Endpoint disponibili:
 - `GET /api/v1/client/contents?workspaceId=ws_acme`
 - `GET /api/v1/client/content/:contentId`
 - `PATCH /api/v1/client/content/:contentId/variant` (selezione variante attiva)
+- `PATCH /api/v1/client/content/:contentId/text` (editing testo controllato sulla variante attiva)
 - `GET /api/v1/client/content/:contentId/preview`
 - `POST /api/v1/client/content/:contentId/duplicate`
 - `DELETE /api/v1/client/content/:contentId`
@@ -34,10 +35,11 @@ Il flusso implementato include:
 2. selezione template per ruolo slide
 3. assegnazione SVG compatibili
 4. validazione vincoli (template/slot/testo/SVG)
-5. payload render-ready per preview
-6. gestione varianti contenuto (fino a 3)
-7. storico contenuti in-memory (list + duplicate + delete)
-8. export JSON in-memory
+5. editing testo controllato con validazione vincoli
+6. payload render-ready per preview
+7. gestione varianti contenuto (fino a 3)
+8. storico contenuti in-memory (list + duplicate + delete)
+9. export JSON in-memory
 
 ## Quickstart
 Prerequisiti: Node.js 18+
