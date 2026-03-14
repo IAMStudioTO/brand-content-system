@@ -38,6 +38,18 @@ function extractLayers(node) {
         };
     });
 }
+function summarizeAvailableSlots(layers) {
+    const counts = {};
+    for (const layer of layers) {
+        if (!layer.semanticRole)
+            continue;
+        if (!counts[layer.semanticRole]) {
+            counts[layer.semanticRole] = 0;
+        }
+        counts[layer.semanticRole] += 1;
+    }
+    return counts;
+}
 figma.ui.onmessage = async (msg) => {
     if (msg.type === "SCAN_SELECTION") {
         const selection = figma.currentPage.selection;
@@ -60,6 +72,7 @@ figma.ui.onmessage = async (msg) => {
         }
         const frame = node;
         const layers = extractLayers(frame);
+        const availableSlots = summarizeAvailableSlots(layers);
         figma.ui.postMessage({
             type: "SELECTION_RESULT",
             ok: true,
@@ -68,6 +81,7 @@ figma.ui.onmessage = async (msg) => {
                 width: Math.round(frame.width),
                 height: Math.round(frame.height),
                 layerCount: layers.length,
+                availableSlots,
                 layers
             }
         });

@@ -8,6 +8,19 @@ type ParsedLayerName = {
   slotIndex: number | null;
 };
 
+type ExtractedLayer = {
+  name: string;
+  semanticRole: string | null;
+  slotIndex: number | null;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  visible: boolean;
+  zIndex: number;
+};
+
 function parseLayerName(layerName: string): ParsedLayerName {
   const name = layerName.trim().toLowerCase();
 
@@ -29,7 +42,7 @@ function parseLayerName(layerName: string): ParsedLayerName {
   return { semanticRole: null, slotIndex: null };
 }
 
-function extractLayers(node: SceneNode): any[] {
+function extractLayers(node: SceneNode): ExtractedLayer[] {
   if (!("children" in node)) return [];
 
   return node.children.map((child, index) => {
@@ -48,6 +61,22 @@ function extractLayers(node: SceneNode): any[] {
       zIndex: index
     };
   });
+}
+
+function summarizeAvailableSlots(layers: ExtractedLayer[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+
+  for (const layer of layers) {
+    if (!layer.semanticRole) continue;
+
+    if (!counts[layer.semanticRole]) {
+      counts[layer.semanticRole] = 0;
+    }
+
+    counts[layer.semanticRole] += 1;
+  }
+
+  return counts;
 }
 
 figma.ui.onmessage = async (msg) => {
@@ -76,6 +105,7 @@ figma.ui.onmessage = async (msg) => {
 
     const frame = node as FrameNode | ComponentNode | InstanceNode;
     const layers = extractLayers(frame);
+    const availableSlots = summarizeAvailableSlots(layers);
 
     figma.ui.postMessage({
       type: "SELECTION_RESULT",
@@ -85,6 +115,7 @@ figma.ui.onmessage = async (msg) => {
         width: Math.round(frame.width),
         height: Math.round(frame.height),
         layerCount: layers.length,
+        availableSlots,
         layers
       }
     });
