@@ -337,16 +337,19 @@ async function handler(req, res) {
   if (req.method === 'POST' && path === '/api/v1/client/content/generate') {
     try {
       const body = await parseBody(req);
-      if (!body.prompt || !body.workspaceId) {
-        return sendJson(res, 400, { error: 'Invalid request body' });
+      const workspaceId = String(body.workspaceId || '').trim();
+      const prompt = String(body.prompt || '').trim();
+
+      if (!workspaceId || !prompt) {
+        return sendJson(res, 400, { error: '400_GENERATE_REQUEST_INVALID' });
       }
 
-      const workspace = getWorkspace(body.workspaceId);
+      const workspace = getWorkspace(workspaceId);
       if (!workspace) {
         return sendJson(res, 404, { error: 'Workspace not found' });
       }
 
-      const generated = planContentVariants(workspace, body.prompt, body.variants);
+      const generated = planContentVariants(workspace, prompt, body.variants);
       for (const variant of generated.variants) {
         const validation = validateGeneratedContent(workspace, variant);
         if (!validation.ok) {

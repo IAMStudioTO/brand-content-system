@@ -24,6 +24,7 @@ Endpoint disponibili:
 
 ### Client
 - `POST /api/v1/client/content/generate` (supporto `variants` 1..3)
+  - errore `400_GENERATE_REQUEST_INVALID` se `workspaceId`/`prompt` sono mancanti o vuoti
 - `GET /api/v1/client/contents?workspaceId=ws_acme`
 - `GET /api/v1/client/content/:contentId`
 - `PATCH /api/v1/client/content/:contentId/variant` (selezione variante attiva)

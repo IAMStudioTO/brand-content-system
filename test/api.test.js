@@ -795,3 +795,38 @@ test('Admin workspace update/delete lifecycle with guard on existing contents', 
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+
+test('Client generate validation returns 400_GENERATE_REQUEST_INVALID', async () => {
+  const server = startServer(0);
+  const port = server.address().port;
+
+  try {
+    const missingPrompt = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/client/content/generate',
+      body: {
+        workspaceId: 'ws_acme',
+        prompt: '   '
+      }
+    });
+
+    assert.equal(missingPrompt.status, 400);
+    assert.equal(missingPrompt.body.error, '400_GENERATE_REQUEST_INVALID');
+
+    const missingWorkspace = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/client/content/generate',
+      body: {
+        prompt: 'Crea un post'
+      }
+    });
+
+    assert.equal(missingWorkspace.status, 400);
+    assert.equal(missingWorkspace.body.error, '400_GENERATE_REQUEST_INVALID');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
