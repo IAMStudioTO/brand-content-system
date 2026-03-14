@@ -1,7 +1,7 @@
 // Brand Content System — Figma Plugin
 // Main thread: accesso alla Figma Plugin API
 
-figma.showUI(__html__, { width: 420, height: 520 });
+figma.showUI(__html__, { width: 420, height: 640 });
 
 function extractLayers(node: SceneNode): any[] {
   if (!("children" in node)) return [];
@@ -19,14 +19,14 @@ function extractLayers(node: SceneNode): any[] {
 }
 
 figma.ui.onmessage = async (msg) => {
-  if (msg.type === "GET_SELECTION") {
+  if (msg.type === "SCAN_SELECTION") {
     const selection = figma.currentPage.selection;
 
     if (!selection || selection.length === 0) {
       figma.ui.postMessage({
         type: "SELECTION_RESULT",
         ok: false,
-        error: "Seleziona un frame o componente"
+        error: "Seleziona un Frame, Component o Instance in Figma."
       });
       return;
     }
@@ -37,7 +37,7 @@ figma.ui.onmessage = async (msg) => {
       figma.ui.postMessage({
         type: "SELECTION_RESULT",
         ok: false,
-        error: "Seleziona un FRAME, COMPONENT o INSTANCE"
+        error: "Seleziona un FRAME, COMPONENT o INSTANCE."
       });
       return;
     }
@@ -59,7 +59,8 @@ figma.ui.onmessage = async (msg) => {
     return;
   }
 
-  if (msg.type === "CLOSE") {
+  if (msg.type === "CLOSE_PLUGIN") {
     figma.closePlugin();
+    return;
   }
 };

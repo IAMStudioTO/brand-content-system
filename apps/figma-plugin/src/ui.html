@@ -1,134 +1,103 @@
-<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0f0f0f;--sur:#1a1a1a;--sur2:#242424;--bor:#2e2e2e;--acc:#b88a44;--txt:#f0ede8;--muted:#888;--dim:#555;--ok:#4caf72;--err:#e05252;--warn:#d4a017;--r:6px}
-body{font-family:"Inter",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:12px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column}
-.hdr{padding:14px 16px 10px;border-bottom:1px solid var(--bor);display:flex;align-items:center;gap:10px}
-.logo{width:24px;height:24px;background:var(--acc);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#0f0f0f;flex-shrink:0}
-.hdr h1{font-size:12px;font-weight:600}.hdr p{font-size:10px;color:var(--muted);margin-top:1px}
-.body{flex:1;padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
-.field{display:flex;flex-direction:column;gap:5px}
-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-input{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);color:var(--txt);font-size:12px;padding:7px 10px;outline:none;width:100%;transition:border-color .15s;font-family:inherit}
-input:focus{border-color:var(--acc)}
-input::placeholder{color:var(--dim)}
-.card{background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:10px 12px;display:none;flex-direction:column;gap:8px}
-.card.on{display:flex}
-.chead{display:flex;align-items:center;justify-content:space-between}
-.cname{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
-.cname::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0}
-.cdim{font-size:10px;color:var(--muted)}
-.layers{display:flex;flex-direction:column;gap:3px}
-.layer{display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--sur2);border-radius:4px;font-size:11px}
-.badge{font-size:9px;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:3px;flex-shrink:0}
-.bt{background:rgba(99,152,255,.2);color:#6398ff}
-.bs{background:rgba(184,138,68,.2);color:var(--acc)}
-.bi{background:rgba(76,175,114,.2);color:var(--ok)}
-.lname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hint{font-size:10px;color:var(--dim);margin-top:2px}
-.irow{display:flex;gap:8px;align-items:flex-end}
-.irow .field{flex:1}
-.bgen{background:var(--sur2);border:1px solid var(--bor);color:var(--muted);border-radius:var(--r);padding:7px 10px;font-size:10px;cursor:pointer;height:32px;transition:all .15s}
-.bgen:hover{border-color:var(--acc);color:var(--acc)}
-.warns{display:none;flex-direction:column;gap:4px}
-.warns.on{display:flex}
-.warn{font-size:10px;color:var(--warn);background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.2);border-radius:4px;padding:5px 8px}
-.status{display:none;border-radius:var(--r);padding:10px 12px;font-size:11px;line-height:1.4;white-space:pre-line}
-.status.on{display:block}
-.status.info{background:rgba(184,138,68,.12);border:1px solid rgba(184,138,68,.3);color:var(--acc)}
-.status.ok{background:rgba(76,175,114,.1);border:1px solid rgba(76,175,114,.3);color:var(--ok)}
-.status.err{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);color:var(--err)}
-.ftr{padding:12px 16px;border-top:1px solid var(--bor);display:flex;gap:8px}
-button{border:none;border-radius:var(--r);font-size:12px;font-family:inherit;font-weight:500;cursor:pointer;padding:8px 14px;transition:all .15s}
-.bprim{background:var(--acc);color:#0f0f0f;flex:1}
-.bprim:hover:not(:disabled){background:#c99b52}
-.bprim:disabled{opacity:.4;cursor:not-allowed}
-.bsec{background:var(--sur);color:var(--muted);border:1px solid var(--bor)}
-.bsec:hover{border-color:var(--muted);color:var(--txt)}
-.bscan{background:var(--sur2);color:var(--txt);border:1px solid var(--bor);width:100%}
-.bscan:hover{border-color:var(--acc);color:var(--acc)}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spin{display:inline-block;width:10px;height:10px;border:2px solid rgba(15,15,15,.3);border-top-color:#0f0f0f;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:middle}
-.empty{text-align:center;padding:24px 16px;color:var(--muted)}
-.empty .ico{font-size:28px;margin-bottom:8px}
-.empty p{font-size:11px;line-height:1.5}
-.sep{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);display:flex;align-items:center;gap:8px}
-.sep::after{content:"";flex:1;height:1px;background:var(--bor)}
-</style></head><body>
-<div class="hdr"><div class="logo">BCS</div><div><h1>Brand Content System</h1><p>Template Sync &#x2014; Plugin MVP</p></div></div>
-<div class="body">
-<div class="sep">1 &#x2014; Frame</div>
-<div class="empty" id="empty"><div class="ico">&#x2B21;</div><p>Seleziona un Frame, Component o Instance<br>in Figma, poi clicca Scansiona.</p></div>
-<button class="bscan" id="btnScan">Scansiona frame selezionato</button>
-<div class="card" id="card">
-  <div class="chead"><div class="cname" id="cname">&#x2014;</div><div class="cdim" id="cdim">&#x2014;</div></div>
-  <div class="layers" id="layers"></div>
-</div>
-<div class="warns" id="warns"></div>
-<div class="sep">2 &#x2014; Configurazione</div>
-<div class="irow"><div class="field"><label>Template ID</label><input id="tplId" placeholder="template_cover_01"></div><button class="bgen" id="btnGen">Genera</button></div>
-<div class="field"><label>Ruoli (virgola-separati)</label><input id="roles" placeholder="cover, cta"><div class="hint">Es: cover, problem, consequence, solution, explanation, cta</div></div>
-<div class="sep">3 &#x2014; Backend</div>
-<div class="field"><label>Workspace ID</label><input id="wsId" value="ws_acme"></div>
-<div class="field"><label>Backend URL</label><input id="url" value="http://localhost:3000"></div>
-<div class="status" id="status"></div>
-</div>
-<div class="ftr"><button class="bsec" id="btnCancel">Chiudi</button><button class="bprim" id="btnSync" disabled>Sincronizza template</button></div>
-<script>
-var tpl=null;
-var $=function(id){return document.getElementById(id)};
-function show(msg,type){var s=$("status");s.textContent=msg;s.className="status on "+(type||"info")}
-function hide(){$("status").className="status"}
-function slug(n){return"template_"+n.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/,"").slice(0,40)}
-function renderLayers(layers){
-  var el=$("layers");el.innerHTML="";
-  if(!layers||!layers.length){el.innerHTML="<div style='font-size:10px;color:var(--dim);padding:4px 6px'>Nessun layer semantico</div>";return}
-  layers.forEach(function(l){
-    var r=document.createElement("div");r.className="layer";
-    var bc=l.type==="text"?"bt":l.type==="svg"?"bs":"bi";
-    r.innerHTML="<span class='badge "+bc+"'>"+l.type+"</span><span class='lname'>"+l.name+"</span>";
-    el.appendChild(r);
-  });
-}
-function renderWarns(ws){
-  var el=$("warns");el.innerHTML="";
-  if(!ws||!ws.length){el.className="warns";return}
-  ws.forEach(function(w){var r=document.createElement("div");r.className="warn";r.textContent=w;el.appendChild(r)});
-  el.className="warns on";
-}
-window.onmessage=function(ev){
-  var m=ev.data.pluginMessage;if(!m)return;
-  if(m.type==="SELECTION_EMPTY"){$("empty").style.display="block";$("card").className="card";show("Nessun elemento selezionato.","err")}
-  else if(m.type==="SELECTION_INVALID"){$("empty").style.display="block";$("card").className="card";show(m.message,"err")}
-  else if(m.type==="PARSING_START"){$("empty").style.display="none";show("Analisi in corso…","info");$("btnSync").disabled=true}
-  else if(m.type==="FRAME_PARSED"){
-    tpl=m.template;$("cname").textContent=m.frameName;$("cdim").textContent=m.template.width+" × "+m.template.height;
-    $("card").className="card on";$("empty").style.display="none";
-    if(!$("tplId").value.trim())$("tplId").value=slug(m.frameName);
-    renderLayers(m.template.layers);renderWarns(m.warnings);
-    var c=m.template.layers.length;
-    if(!c)show("Nessun layer semantico. Rinomina con text/, image/ o svg/.","err");
-    else{hide();show(c+" layer trovati. Configura e sincronizza.","info");$("btnSync").disabled=false}
-  }
-  else if(m.type==="PARSE_ERROR")show("Errore analisi: "+m.message,"err");
-  else if(m.type==="SYNC_SUCCESS"){show("Sincronizzato: "+m.template.id,"ok");$("btnSync").disabled=false;$("btnSync").innerHTML="Sincronizza template"}
-  else if(m.type==="SYNC_ERROR"){show("Errore ("+(m.status||"network")+"): "+m.error,"err");$("btnSync").disabled=false;$("btnSync").innerHTML="Sincronizza template"}
-};
-$("btnScan").onclick=function(){hide();tpl=null;$("card").className="card";$("warns").className="warns";$("btnSync").disabled=true;parent.postMessage({pluginMessage:{type:"READY"}},"*")};
-$("btnGen").onclick=function(){$("tplId").value=tpl?slug(tpl.name||"template"):"template_"+Date.now().toString(36)};
-$("btnSync").onclick=function(){
-  if(!tpl){show("Prima scansiona un frame.","err");return}
-  var id=$("tplId").value.trim(),r=$("roles").value.trim(),ws=$("wsId").value.trim(),u=$("url").value.trim();
-  if(!id){show("Inserisci un Template ID.","err");$("tplId").focus();return}
-  if(!r){show("Inserisci almeno un ruolo.","err");$("roles").focus();return}
-  if(!ws){show("Inserisci il Workspace ID.","err");$("wsId").focus();return}
-  if(!u){show("Inserisci il Backend URL.","err");$("url").focus();return}
-  var roles=r.split(",").map(function(x){return x.trim()}).filter(Boolean);
-  var t=Object.assign({},tpl,{id:id,roles:roles});
-  $("btnSync").disabled=true;$("btnSync").innerHTML="<span class='spin'></span>Sincronizzazione…";
-  show("Invio al backend…","info");
-  parent.postMessage({pluginMessage:{type:"SYNC",data:{workspaceId:ws,backendUrl:u,template:t}}},"*");
-};
-$("btnCancel").onclick=function(){parent.postMessage({pluginMessage:{type:"CANCEL"}},"*")};
-parent.postMessage({pluginMessage:{type:"READY"}},"*");
-</script></body></html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <title>Brand Content System</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: Inter, system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #f0ede8;
+    }
+    .wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0;
+    }
+    p {
+      margin: 0;
+      color: #bdb7ae;
+      line-height: 1.5;
+    }
+    button {
+      width: 100%;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .primary {
+      background: #c6923d;
+      color: #111;
+    }
+    .secondary {
+      background: #2a2a2a;
+      color: #f0ede8;
+    }
+    pre {
+      background: #1b1b1b;
+      border-radius: 10px;
+      padding: 12px;
+      overflow: auto;
+      min-height: 220px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Brand Content System</h1>
+    <p>Plugin MVP per leggere il frame selezionato e i suoi layer.</p>
+
+    <button id="scan" class="primary">Scansiona frame selezionato</button>
+    <button id="close" class="secondary">Chiudi</button>
+
+    <pre id="output">In attesa...</pre>
+  </div>
+
+  <script>
+    const output = document.getElementById("output");
+    const scanBtn = document.getElementById("scan");
+    const closeBtn = document.getElementById("close");
+
+    scanBtn.onclick = () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "SCAN_SELECTION"
+          }
+        },
+        "*"
+      );
+    };
+
+    closeBtn.onclick = () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "CLOSE_PLUGIN"
+          }
+        },
+        "*"
+      );
+    };
+
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+      output.textContent = JSON.stringify(msg, null, 2);
+    };
+  </script>
+</body>
+</html>
