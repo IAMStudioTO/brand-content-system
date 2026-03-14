@@ -65,6 +65,29 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     assert.equal(getContent.status, 200);
     assert.equal(getContent.body.variants.length, 3);
 
+    const createdTempWorkspace = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/workspaces',
+      body: {
+        id: 'ws_tmp_auth',
+        brandId: 'brand_tmp_auth',
+        name: 'Temp Auth Workspace'
+      }
+    });
+
+    assert.equal(createdTempWorkspace.status, 201);
+
+    const getContentWrongWorkspace = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}?workspaceId=ws_tmp_auth`
+    });
+
+    assert.equal(getContentWrongWorkspace.status, 403);
+    assert.equal(getContentWrongWorkspace.body.error, '403_WORKSPACE_MISMATCH');
+
+
     const listBeforeDelete = await requestJson({
       method: 'GET',
       port,
@@ -175,10 +198,7 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(exportedPayload.status, 200);
     assert.equal(exportedPayload.body.variants.length, 3);
-<<<<<<< HEAD
     assert.equal(exportedPayload.body.variants[2].slides[0].textAssignments.headline, 'Nuova headline variante 3');
-=======
->>>>>>> origin/work
 
     const createdVersion = await requestJson({
       method: 'POST',
@@ -216,7 +236,6 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(postVersionEdit.status, 200);
 
-<<<<<<< HEAD
     const exportedPayloadAfterEdit = await requestJson({
       method: 'GET',
       port,
@@ -226,8 +245,6 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     assert.equal(exportedPayloadAfterEdit.status, 200);
     assert.equal(exportedPayloadAfterEdit.body.variants[2].slides[0].textAssignments.headline, 'Nuova headline variante 3');
 
-=======
->>>>>>> origin/work
     const restoreVersion = await requestJson({
       method: 'POST',
       port,
@@ -273,6 +290,25 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(invalidVariant.status, 422);
     assert.equal(invalidVariant.body.error, '422_VARIANT_INDEX_OUT_OF_RANGE');
+
+
+    const wrongWorkspaceTextUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/text`,
+      body: {
+        workspaceId: 'ws_tmp_auth',
+        updates: [
+          {
+            slideIndex: 0,
+            textAssignments: { headline: 'X' }
+          }
+        ]
+      }
+    });
+
+    assert.equal(wrongWorkspaceTextUpdate.status, 403);
+    assert.equal(wrongWorkspaceTextUpdate.body.error, '403_WORKSPACE_MISMATCH');
 
     const invalidTextUpdate = await requestJson({
       method: 'PATCH',
@@ -342,7 +378,6 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     assert.ok(duplicated.body.contentId);
     assert.notEqual(duplicated.body.contentId, generation.body.contentId);
 
-<<<<<<< HEAD
     const duplicateTextUpdate = await requestJson({
       method: 'PATCH',
       port,
@@ -373,8 +408,6 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
       'Headline solo duplicato'
     );
 
-=======
->>>>>>> origin/work
     const listAfterDuplicate = await requestJson({
       method: 'GET',
       port,
@@ -468,7 +501,7 @@ test('Admin template sync and svg asset lifecycle', async () => {
       method: 'PATCH',
       port,
       path: '/api/v1/admin/svg-assets/svg_frame_01/activation',
-      body: { isActive: false }
+      body: { workspaceId: 'ws_acme', isActive: false }
     });
 
     assert.equal(deactivate.status, 200);
@@ -482,6 +515,278 @@ test('Admin template sync and svg asset lifecycle', async () => {
 
     assert.equal(listAssets.status, 200);
     assert.ok(listAssets.body.assets.find((asset) => asset.id === 'svg_frame_01'));
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+
+test('Admin workspace management supports create/list/get and workspace-scoped content listing', async () => {
+  const server = startServer(0);
+  const port = server.address().port;
+
+  try {
+    const listBefore = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/admin/workspaces'
+    });
+
+    assert.equal(listBefore.status, 200);
+    assert.ok(Array.isArray(listBefore.body.items));
+    assert.ok(listBefore.body.items.find((ws) => ws.id === 'ws_acme'));
+
+    const create = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/workspaces',
+      body: {
+        id: 'ws_beta',
+        brandId: 'brand_beta',
+        name: 'Beta Workspace',
+        format: 'linkedin-1080x1350'
+      }
+    });
+
+    assert.equal(create.status, 201);
+    assert.equal(create.body.workspace.id, 'ws_beta');
+
+    const createDuplicate = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/workspaces',
+      body: {
+        id: 'ws_beta',
+        brandId: 'brand_beta',
+        name: 'Beta Workspace'
+      }
+    });
+
+    assert.equal(createDuplicate.status, 409);
+    assert.equal(createDuplicate.body.error, '409_WORKSPACE_ALREADY_EXISTS');
+
+    const getWorkspace = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/admin/workspaces/ws_beta'
+    });
+
+    assert.equal(getWorkspace.status, 200);
+    assert.equal(getWorkspace.body.id, 'ws_beta');
+
+    const syncTemplate = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/templates/sync',
+      body: {
+        workspaceId: 'ws_beta',
+        template: {
+          id: 'template_beta_cover',
+          name: 'Beta Cover',
+          width: 1080,
+          height: 1350,
+          roles: ['cover'],
+          layers: [
+            { name: 'text/headline', type: 'text', rules: { maxChars: 70 } },
+            {
+              name: 'svg/background_main',
+              type: 'svg',
+              assetUrl: 'https://storage.example.com/beta-bg.svg'
+            }
+          ]
+        }
+      }
+    });
+
+    assert.equal(syncTemplate.status, 201);
+
+    const addAsset = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/svg-assets',
+      body: {
+        workspaceId: 'ws_beta',
+        asset: {
+          id: 'svg_beta_bg_01',
+          name: 'Beta BG',
+          category: 'background',
+          compatibleSlots: ['background_main'],
+          compatibleTemplates: ['template_beta_cover']
+        }
+      }
+    });
+
+    assert.equal(addAsset.status, 201);
+
+    const generationAcme = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/client/content/generate',
+      body: {
+        workspaceId: 'ws_acme',
+        prompt: 'Crea un post singolo'
+      }
+    });
+
+    const generationBeta = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/client/content/generate',
+      body: {
+        workspaceId: 'ws_beta',
+        prompt: 'Crea un post singolo per beta'
+      }
+    });
+
+    assert.equal(generationAcme.status, 200);
+    assert.equal(generationBeta.status, 200);
+
+    const listAcme = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/client/contents?workspaceId=ws_acme'
+    });
+
+    const listBeta = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/client/contents?workspaceId=ws_beta'
+    });
+
+    assert.equal(listAcme.status, 200);
+    assert.equal(listBeta.status, 200);
+    assert.ok(listAcme.body.items.every((i) => i.id !== generationBeta.body.contentId));
+    assert.ok(listBeta.body.items.find((i) => i.id === generationBeta.body.contentId));
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+
+test('Admin workspace update/delete lifecycle with guard on existing contents', async () => {
+  const server = startServer(0);
+  const port = server.address().port;
+
+  try {
+    const create = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/workspaces',
+      body: {
+        id: 'ws_gamma',
+        brandId: 'brand_gamma',
+        name: 'Gamma Workspace'
+      }
+    });
+
+    assert.equal(create.status, 201);
+
+    const invalidUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: '/api/v1/admin/workspaces/ws_gamma',
+      body: {}
+    });
+
+    assert.equal(invalidUpdate.status, 400);
+    assert.equal(invalidUpdate.body.error, '400_WORKSPACE_UPDATE_INVALID');
+
+    const update = await requestJson({
+      method: 'PATCH',
+      port,
+      path: '/api/v1/admin/workspaces/ws_gamma',
+      body: {
+        name: 'Gamma Workspace Updated',
+        format: 'instagram-1080x1080'
+      }
+    });
+
+    assert.equal(update.status, 200);
+    assert.equal(update.body.workspace.name, 'Gamma Workspace Updated');
+    assert.equal(update.body.workspace.format, 'instagram-1080x1080');
+
+    const deleteEmpty = await requestJson({
+      method: 'DELETE',
+      port,
+      path: '/api/v1/admin/workspaces/ws_gamma'
+    });
+
+    assert.equal(deleteEmpty.status, 200);
+    assert.equal(deleteEmpty.body.deleted, true);
+
+    const createDelta = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/workspaces',
+      body: {
+        id: 'ws_delta',
+        brandId: 'brand_delta',
+        name: 'Delta Workspace'
+      }
+    });
+
+    assert.equal(createDelta.status, 201);
+
+    const syncTemplate = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/templates/sync',
+      body: {
+        workspaceId: 'ws_delta',
+        template: {
+          id: 'template_delta_cover',
+          name: 'Delta Cover',
+          width: 1080,
+          height: 1350,
+          roles: ['cover'],
+          layers: [
+            { name: 'text/headline', type: 'text', rules: { maxChars: 70 } },
+            { name: 'svg/background_main', type: 'svg', assetUrl: 'https://storage.example.com/delta-bg.svg' }
+          ]
+        }
+      }
+    });
+
+    assert.equal(syncTemplate.status, 201);
+
+    const addAsset = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/admin/svg-assets',
+      body: {
+        workspaceId: 'ws_delta',
+        asset: {
+          id: 'svg_delta_bg_01',
+          name: 'Delta BG',
+          category: 'background',
+          compatibleSlots: ['background_main'],
+          compatibleTemplates: ['template_delta_cover']
+        }
+      }
+    });
+
+    assert.equal(addAsset.status, 201);
+
+    const generate = await requestJson({
+      method: 'POST',
+      port,
+      path: '/api/v1/client/content/generate',
+      body: {
+        workspaceId: 'ws_delta',
+        prompt: 'Crea una cover singola'
+      }
+    });
+
+    assert.equal(generate.status, 200);
+
+    const deleteWithContent = await requestJson({
+      method: 'DELETE',
+      port,
+      path: '/api/v1/admin/workspaces/ws_delta'
+    });
+
+    assert.equal(deleteWithContent.status, 409);
+    assert.equal(deleteWithContent.body.error, '409_WORKSPACE_HAS_CONTENTS');
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

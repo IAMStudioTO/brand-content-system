@@ -1,5 +1,5 @@
 const http = require('http');
-const { workspace } = require('./data/seed');
+const { workspace: seedWorkspace } = require('./data/seed');
 const { planContentVariants } = require('./services/ai-planner');
 const { validateGeneratedContent } = require('./services/validator');
 const { toRenderPayload } = require('./services/renderer');
@@ -8,6 +8,7 @@ const { syncTemplate } = require('./services/template-sync');
 const { addSvgAsset, setSvgAssetActivation } = require('./services/svg-library');
 
 const state = {
+  workspaces: new Map([[seedWorkspace.id, cloneDeep(seedWorkspace)]]),
   contents: new Map(),
   exports: new Map(),
   contentOrder: [],
@@ -64,15 +65,34 @@ function parseVariantIndex(input) {
 }
 
 
+function getWorkspace(workspaceId) {
+  if (!workspaceId) return null;
+  return state.workspaces.get(workspaceId) || null;
+}
+
+function getWorkspaceByContent(content) {
+  return getWorkspace(content.workspaceId);
+}
+
+
+function ensureWorkspaceAccess(content, workspaceId, res) {
+  if (!workspaceId) return true;
+  const workspace = getWorkspace(workspaceId);
+  if (!workspace) {
+    sendJson(res, 404, { error: 'Workspace not found' });
+    return false;
+  }
+  if (content.workspaceId !== workspaceId) {
+    sendJson(res, 403, { error: '403_WORKSPACE_MISMATCH' });
+    return false;
+  }
+  return true;
+}
+
 function cloneContent(content, nextId) {
-<<<<<<< HEAD
   const cloned = cloneDeep(content);
   return {
     ...cloned,
-=======
-  return {
-    ...content,
->>>>>>> origin/work
     id: nextId,
     createdAt: new Date().toISOString()
   };
@@ -166,14 +186,108 @@ async function handler(req, res) {
     return sendJson(res, 200, { ok: true });
   }
 
-  if (req.method === 'GET' && path === '/api/v1/admin/workspaces/ws_acme') {
+  if (req.method === 'GET' && path === '/api/v1/admin/workspaces') {
+    const items = Array.from(state.workspaces.values()).map((ws) => ({
+      id: ws.id,
+      brandId: ws.brandId,
+      name: ws.name,
+      format: ws.format,
+      templatesCount: ws.templates.length,
+      svgAssetsCount: ws.svgAssets.length
+    }));
+    return sendJson(res, 200, { items });
+  }
+
+  const getWorkspaceMatch = path.match(/^\/api\/v1\/admin\/workspaces\/([^/]+)$/);
+  if (req.method === 'GET' && getWorkspaceMatch) {
+    const workspace = getWorkspace(getWorkspaceMatch[1]);
+    if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
     return sendJson(res, 200, workspace);
+  }
+
+
+  const updateWorkspaceMatch = path.match(/^\/api\/v1\/admin\/workspaces\/([^/]+)$/);
+  if (req.method === 'PATCH' && updateWorkspaceMatch) {
+    try {
+      const workspace = getWorkspace(updateWorkspaceMatch[1]);
+      if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
+
+      const body = await parseBody(req);
+      const hasName = Object.prototype.hasOwnProperty.call(body, 'name');
+      const hasFormat = Object.prototype.hasOwnProperty.call(body, 'format');
+      if (!hasName && !hasFormat) {
+        return sendJson(res, 400, { error: '400_WORKSPACE_UPDATE_INVALID' });
+      }
+
+      if (hasName) {
+        const name = String(body.name || '').trim();
+        if (!name) return sendJson(res, 400, { error: '400_WORKSPACE_UPDATE_INVALID' });
+        workspace.name = name;
+      }
+
+      if (hasFormat) {
+        const format = String(body.format || '').trim();
+        if (!format) return sendJson(res, 400, { error: '400_WORKSPACE_UPDATE_INVALID' });
+        workspace.format = format;
+      }
+
+      return sendJson(res, 200, { workspace });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
+  }
+
+  const deleteWorkspaceMatch = path.match(/^\/api\/v1\/admin\/workspaces\/([^/]+)$/);
+  if (req.method === 'DELETE' && deleteWorkspaceMatch) {
+    const workspaceId = deleteWorkspaceMatch[1];
+    const workspace = getWorkspace(workspaceId);
+    if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
+
+    const hasContents = Array.from(state.contents.values()).some((content) => content.workspaceId === workspaceId);
+    if (hasContents) {
+      return sendJson(res, 409, { error: '409_WORKSPACE_HAS_CONTENTS' });
+    }
+
+    state.workspaces.delete(workspaceId);
+    return sendJson(res, 200, { deleted: true, workspaceId });
+  }
+
+  if (req.method === 'POST' && path === '/api/v1/admin/workspaces') {
+    try {
+      const body = await parseBody(req);
+      const id = String(body?.id || '').trim();
+      const brandId = String(body?.brandId || '').trim();
+      const name = String(body?.name || '').trim();
+      const format = String(body?.format || 'linkedin-1080x1350').trim();
+
+      if (!id || !brandId || !name) {
+        return sendJson(res, 400, { error: '400_WORKSPACE_INVALID' });
+      }
+      if (state.workspaces.has(id)) {
+        return sendJson(res, 409, { error: '409_WORKSPACE_ALREADY_EXISTS' });
+      }
+
+      const workspace = {
+        id,
+        brandId,
+        name,
+        format,
+        templates: [],
+        svgAssets: []
+      };
+
+      state.workspaces.set(id, workspace);
+      return sendJson(res, 201, { workspace });
+    } catch (error) {
+      return sendJson(res, 400, { error: error.message });
+    }
   }
 
   if (req.method === 'POST' && path === '/api/v1/admin/templates/sync') {
     try {
       const body = await parseBody(req);
-      if (body.workspaceId !== workspace.id) {
+      const workspace = getWorkspace(body.workspaceId);
+      if (!workspace) {
         return sendJson(res, 404, { error: 'Workspace not found' });
       }
 
@@ -192,7 +306,8 @@ async function handler(req, res) {
   if (req.method === 'POST' && path === '/api/v1/admin/svg-assets') {
     try {
       const body = await parseBody(req);
-      if (body.workspaceId !== workspace.id) {
+      const workspace = getWorkspace(body.workspaceId);
+      if (!workspace) {
         return sendJson(res, 404, { error: 'Workspace not found' });
       }
       const result = addSvgAsset(workspace, body.asset);
@@ -210,6 +325,10 @@ async function handler(req, res) {
   if (req.method === 'PATCH' && activationMatch) {
     try {
       const body = await parseBody(req);
+      const workspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      const workspace = getWorkspace(workspaceId);
+      if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
+
       const result = setSvgAssetActivation(workspace, activationMatch[1], body.isActive);
       if (!result.ok) {
         const status = result.code.startsWith('404_') ? 404 : 422;
@@ -223,7 +342,8 @@ async function handler(req, res) {
 
   if (req.method === 'GET' && path === '/api/v1/admin/svg-assets') {
     const workspaceId = requestUrl.searchParams.get('workspaceId');
-    if (workspaceId !== workspace.id) {
+    const workspace = getWorkspace(workspaceId);
+    if (!workspace) {
       return sendJson(res, 404, { error: 'Workspace not found' });
     }
     return sendJson(res, 200, { assets: workspace.svgAssets });
@@ -232,8 +352,13 @@ async function handler(req, res) {
   if (req.method === 'POST' && path === '/api/v1/client/content/generate') {
     try {
       const body = await parseBody(req);
-      if (!body.prompt || body.workspaceId !== workspace.id) {
+      if (!body.prompt || !body.workspaceId) {
         return sendJson(res, 400, { error: 'Invalid request body' });
+      }
+
+      const workspace = getWorkspace(body.workspaceId);
+      if (!workspace) {
+        return sendJson(res, 404, { error: 'Workspace not found' });
       }
 
       const generated = planContentVariants(workspace, body.prompt, body.variants);
@@ -264,18 +389,21 @@ async function handler(req, res) {
   if (req.method === 'GET' && getContentMatch) {
     const content = getContentOr404(getContentMatch[1], res);
     if (!content) return;
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
     return sendJson(res, 200, content);
   }
 
   if (req.method === 'GET' && path === '/api/v1/client/contents') {
     const workspaceId = requestUrl.searchParams.get('workspaceId');
-    if (workspaceId !== workspace.id) {
+    const workspace = getWorkspace(workspaceId);
+    if (!workspace) {
       return sendJson(res, 404, { error: 'Workspace not found' });
     }
 
     const items = state.contentOrder
       .map((id) => state.contents.get(id))
-      .filter(Boolean)
+      .filter((content) => content && content.workspaceId === workspaceId)
       .map((content) => ({
         id: content.id,
         createdAt: content.createdAt,
@@ -295,6 +423,9 @@ async function handler(req, res) {
       if (!content) return;
 
       const body = await parseBody(req);
+      const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
       const name = String(body?.name || '').trim();
       if (!name) {
         return sendJson(res, 400, { error: '400_VERSION_NAME_REQUIRED' });
@@ -325,6 +456,8 @@ async function handler(req, res) {
   if (req.method === 'GET' && listVersionsMatch) {
     const content = getContentOr404(listVersionsMatch[1], res);
     if (!content) return;
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
 
     const versions = getContentVersions(listVersionsMatch[1]).map((v) => ({
       id: v.id,
@@ -341,6 +474,9 @@ async function handler(req, res) {
     const content = getContentOr404(restoreVersionMatch[1], res);
     if (!content) return;
 
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
     const versions = getContentVersions(restoreVersionMatch[1]);
     const version = versions.find((v) => v.id === restoreVersionMatch[2]);
     if (!version) {
@@ -350,6 +486,9 @@ async function handler(req, res) {
     const restored = cloneDeep(version.data);
     restored.id = content.id;
     restored.createdAt = content.createdAt;
+
+    const workspace = getWorkspaceByContent(content);
+    if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
 
     const validation = validateGeneratedContent(workspace, restored.variants[restored.selectedVariant] || restored.variants[0]);
     if (!validation.ok) {
@@ -370,6 +509,9 @@ async function handler(req, res) {
     const content = getContentOr404(duplicateContentMatch[1], res);
     if (!content) return;
 
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
     const duplicateId = generateId('cnt');
     const duplicated = cloneContent(content, duplicateId);
     state.contents.set(duplicateId, duplicated);
@@ -382,6 +524,9 @@ async function handler(req, res) {
   if (req.method === 'DELETE' && deleteContentMatch) {
     const content = getContentOr404(deleteContentMatch[1], res);
     if (!content) return;
+
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
 
     state.contents.delete(deleteContentMatch[1]);
     state.versions.delete(deleteContentMatch[1]);
@@ -396,6 +541,9 @@ async function handler(req, res) {
       if (!content) return;
 
       const body = await parseBody(req);
+      const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
       const variantIndex = parseVariantIndex(body.variantIndex);
       if (variantIndex === null) {
         return sendJson(res, 400, { error: 'Invalid variantIndex' });
@@ -421,6 +569,9 @@ async function handler(req, res) {
       if (!content) return;
 
       const body = await parseBody(req);
+      const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
       if (!Array.isArray(body.updates) || body.updates.length < 1) {
         return sendJson(res, 400, { error: '400_TEXT_UPDATES_INVALID' });
       }
@@ -432,6 +583,9 @@ async function handler(req, res) {
         const status = updated.code.startsWith('400_') ? 400 : 422;
         return sendJson(res, status, { error: updated.code });
       }
+
+      const workspace = getWorkspaceByContent(content);
+      if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
 
       const validation = validateGeneratedContent(workspace, updated.variant);
       if (!validation.ok) {
@@ -459,6 +613,9 @@ async function handler(req, res) {
       if (!content) return;
 
       const body = await parseBody(req);
+      const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
       if (!Array.isArray(body.updates) || body.updates.length < 1) {
         return sendJson(res, 400, { error: '400_SVG_UPDATES_INVALID' });
       }
@@ -470,6 +627,9 @@ async function handler(req, res) {
         const status = updated.code.startsWith('400_') ? 400 : 422;
         return sendJson(res, status, { error: updated.code });
       }
+
+      const workspace = getWorkspaceByContent(content);
+      if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
 
       const validation = validateGeneratedContent(workspace, updated.variant);
       if (!validation.ok) {
@@ -497,6 +657,9 @@ async function handler(req, res) {
       if (!content) return;
 
       const body = await parseBody(req);
+      const accessWorkspaceId = requestUrl.searchParams.get('workspaceId') || body.workspaceId;
+      if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
       if (!Array.isArray(body.updates) || body.updates.length < 1) {
         return sendJson(res, 400, { error: '400_IMAGE_UPDATES_INVALID' });
       }
@@ -508,6 +671,9 @@ async function handler(req, res) {
         const status = updated.code.startsWith('400_') ? 400 : 422;
         return sendJson(res, status, { error: updated.code });
       }
+
+      const workspace = getWorkspaceByContent(content);
+      if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
 
       const validation = validateGeneratedContent(workspace, updated.variant);
       if (!validation.ok) {
@@ -532,7 +698,11 @@ async function handler(req, res) {
   if (req.method === 'GET' && previewMatch) {
     const content = getContentOr404(previewMatch[1], res);
     if (!content) return;
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
     const selected = content.variants[content.selectedVariant] || content.variants[0];
+    const workspace = getWorkspaceByContent(content);
+    if (!workspace) return sendJson(res, 404, { error: 'Workspace not found' });
     return sendJson(res, 200, toRenderPayload(workspace, selected));
   }
 
@@ -541,13 +711,12 @@ async function handler(req, res) {
     const content = getContentOr404(exportMatch[1], res);
     if (!content) return;
 
+    const accessWorkspaceId = requestUrl.searchParams.get('workspaceId');
+    if (!ensureWorkspaceAccess(content, accessWorkspaceId, res)) return;
+
     const exportId = generateId('exp');
     const downloadUrl = `/api/v1/client/exports/${exportId}.json`;
-<<<<<<< HEAD
     state.exports.set(exportId, { content: cloneDeep(content), downloadUrl });
-=======
-    state.exports.set(exportId, { content, downloadUrl });
->>>>>>> origin/work
     return sendJson(res, 201, { exportId, downloadUrl });
   }
 
