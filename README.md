@@ -12,10 +12,14 @@ Endpoint disponibili:
 - `GET /api/v1/health`
 
 ### Admin
-- `GET /api/v1/admin/workspaces/ws_acme`
+- `GET /api/v1/admin/workspaces`
+- `POST /api/v1/admin/workspaces`
+- `GET /api/v1/admin/workspaces/:workspaceId`
+- `PATCH /api/v1/admin/workspaces/:workspaceId`
+- `DELETE /api/v1/admin/workspaces/:workspaceId`
 - `POST /api/v1/admin/templates/sync`
 - `POST /api/v1/admin/svg-assets`
-- `PATCH /api/v1/admin/svg-assets/:assetId/activation`
+- `PATCH /api/v1/admin/svg-assets/:assetId/activation` (richiede `workspaceId` in body o query)
 - `GET /api/v1/admin/svg-assets?workspaceId=ws_acme`
 
 ### Client
