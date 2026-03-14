@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + list + variant-select + preview + export + delete flow', async () => {
+test('API generate + get + list + variant-select + preview + export + duplicate + delete flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -121,6 +121,25 @@ test('API generate + get + list + variant-select + preview + export + delete flo
 
     assert.equal(invalidVariant.status, 422);
     assert.equal(invalidVariant.body.error, '422_VARIANT_INDEX_OUT_OF_RANGE');
+
+    const duplicated = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/duplicate`
+    });
+
+    assert.equal(duplicated.status, 201);
+    assert.ok(duplicated.body.contentId);
+    assert.notEqual(duplicated.body.contentId, generation.body.contentId);
+
+    const listAfterDuplicate = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/client/contents?workspaceId=ws_acme'
+    });
+
+    assert.equal(listAfterDuplicate.status, 200);
+    assert.equal(listAfterDuplicate.body.items[0].id, duplicated.body.contentId);
 
     const deleted = await requestJson({
       method: 'DELETE',

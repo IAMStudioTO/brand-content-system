@@ -62,6 +62,15 @@ function parseVariantIndex(input) {
   return index;
 }
 
+
+function cloneContent(content, nextId) {
+  return {
+    ...content,
+    id: nextId,
+    createdAt: new Date().toISOString()
+  };
+}
+
 async function handler(req, res) {
   const requestUrl = parseRequestUrl(req);
   const path = requestUrl.pathname;
@@ -190,6 +199,19 @@ async function handler(req, res) {
       }));
 
     return sendJson(res, 200, { items });
+  }
+
+  const duplicateContentMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/duplicate$/);
+  if (req.method === 'POST' && duplicateContentMatch) {
+    const content = getContentOr404(duplicateContentMatch[1], res);
+    if (!content) return;
+
+    const duplicateId = generateId('cnt');
+    const duplicated = cloneContent(content, duplicateId);
+    state.contents.set(duplicateId, duplicated);
+    state.contentOrder.unshift(duplicateId);
+
+    return sendJson(res, 201, { contentId: duplicateId, ...duplicated });
   }
 
   const deleteContentMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)$/);
