@@ -392,6 +392,24 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     });
 
     assert.equal(getDeleted.status, 404);
+    const restoreDeleted = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/restore`,
+      body: { workspaceId: 'ws_acme' }
+    });
+
+    assert.equal(restoreDeleted.status, 200);
+    assert.equal(restoreDeleted.body.restored, true);
+
+    const getAfterRestore = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}`
+    });
+
+    assert.equal(getAfterRestore.status, 200);
+
 
     const listAfterDelete = await requestJson({
       method: 'GET',
