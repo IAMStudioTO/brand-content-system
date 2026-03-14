@@ -17,7 +17,7 @@ function extractLayers(node) {
     }));
 }
 figma.ui.onmessage = async (msg) => {
-    if (msg.type === "READ_SELECTION") {
+    if (msg.type === "GET_SELECTION") {
         const selection = figma.currentPage.selection;
         if (!selection || selection.length === 0) {
             figma.ui.postMessage({
@@ -28,11 +28,11 @@ figma.ui.onmessage = async (msg) => {
             return;
         }
         const node = selection[0];
-        if (node.type !== "FRAME" && node.type !== "COMPONENT") {
+        if (node.type !== "FRAME" && node.type !== "COMPONENT" && node.type !== "INSTANCE") {
             figma.ui.postMessage({
                 type: "SELECTION_RESULT",
                 ok: false,
-                error: "Seleziona un FRAME o COMPONENT"
+                error: "Seleziona un FRAME, COMPONENT o INSTANCE"
             });
             return;
         }
@@ -43,14 +43,15 @@ figma.ui.onmessage = async (msg) => {
             ok: true,
             payload: {
                 frameName: frame.name,
-                width: frame.width,
-                height: frame.height,
+                width: Math.round(frame.width),
+                height: Math.round(frame.height),
                 layerCount: layers.length,
                 layers
             }
         });
+        return;
     }
-    if (msg.type === "CLOSE_PLUGIN") {
+    if (msg.type === "CLOSE") {
         figma.closePlugin();
     }
 };
