@@ -2,9 +2,35 @@ function getTemplate(workspace, templateId) {
   return workspace.templates.find((t) => t.id === templateId) || null;
 }
 
+function validateRequiredTextSlots(template, textAssignments = {}) {
+  const requiredSlots = Object.keys(template.textSlots || {});
+  for (const slot of requiredSlots) {
+    if (!(slot in textAssignments)) {
+      return { ok: false, code: '422_REQUIRED_TEXT_SLOT_MISSING' };
+    }
+  }
+  return { ok: true };
+}
+
+function validateRequiredSvgSlots(template, svgAssignments = {}) {
+  const requiredSlots = template.svgSlots || [];
+  for (const slot of requiredSlots) {
+    if (!(slot in svgAssignments)) {
+      return { ok: false, code: '422_REQUIRED_SVG_SLOT_MISSING' };
+    }
+  }
+  return { ok: true };
+}
+
 function validateSlide(workspace, slide) {
   const template = getTemplate(workspace, slide.templateId);
   if (!template) return { ok: false, code: '422_TEMPLATE_NOT_ALLOWED' };
+
+  const textRequired = validateRequiredTextSlots(template, slide.textAssignments);
+  if (!textRequired.ok) return textRequired;
+
+  const svgRequired = validateRequiredSvgSlots(template, slide.svgAssignments);
+  if (!svgRequired.ok) return svgRequired;
 
   for (const slot of Object.keys(slide.textAssignments || {})) {
     if (!template.textSlots[slot]) {
@@ -49,5 +75,7 @@ function validateGeneratedContent(workspace, payload) {
 
 module.exports = {
   validateSlide,
-  validateGeneratedContent
+  validateGeneratedContent,
+  validateRequiredTextSlots,
+  validateRequiredSvgSlots
 };

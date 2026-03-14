@@ -116,6 +116,15 @@ Database consigliato: PostgreSQL (multi-tenant logico per workspace/brand).
 - `cta` BOOLEAN NOT NULL DEFAULT false
 - UNIQUE (`generated_content_id`, `slide_index`)
 
+
+### `generated_content_versions`
+- `id` UUID PK
+- `generated_content_id` UUID NOT NULL REFERENCES generated_contents(id) ON DELETE CASCADE
+- `name` TEXT NOT NULL
+- `selected_variant` INT NOT NULL
+- `snapshot` JSONB NOT NULL
+- `created_at` TIMESTAMPTZ DEFAULT now()
+
 ## 6) Audit log
 
 ### `audit_events`
@@ -132,6 +141,7 @@ Database consigliato: PostgreSQL (multi-tenant logico per workspace/brand).
 - `svg_assets(workspace_id, category, is_active)`
 - `generated_contents(workspace_id, created_at DESC)`
 - `generated_slides(generated_content_id, slide_index)`
+- `generated_content_versions(generated_content_id, created_at DESC)`
 - `audit_events(workspace_id, created_at DESC)`
 
 ## 8) Notes tenancy

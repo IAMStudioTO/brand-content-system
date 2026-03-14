@@ -21,6 +21,12 @@ function inferSlideCount(prompt, mode) {
   return 5;
 }
 
+function clampVariants(variants) {
+  const v = Number.parseInt(variants, 10);
+  if (!Number.isFinite(v)) return 1;
+  return Math.min(3, Math.max(1, v));
+}
+
 function buildTextAssignments(template, role, prompt) {
   const text = {};
   Object.entries(template.textSlots).forEach(([slot, rules]) => {
@@ -39,7 +45,7 @@ function buildTextAssignments(template, role, prompt) {
   return text;
 }
 
-function planSlides(workspace, prompt) {
+function planSlides(workspace, prompt, variantIndex = 0) {
   const mode = inferModeFromPrompt(prompt);
   const numberOfSlides = inferSlideCount(prompt, mode);
   const roles = mode === 'single' ? ['cover'] : CAROUSEL_ROLES.slice(0, numberOfSlides);
@@ -54,7 +60,7 @@ function planSlides(workspace, prompt) {
       role,
       templateId: template.id,
       textAssignments: buildTextAssignments(template, role, prompt),
-      svgAssignments: assignSvgsForTemplate(workspace, template),
+      svgAssignments: assignSvgsForTemplate(workspace, template, variantIndex),
       imageRequirements: [],
       cta: role === 'cta'
     };
@@ -67,8 +73,20 @@ function planSlides(workspace, prompt) {
   };
 }
 
+function planContentVariants(workspace, prompt, variants) {
+  const count = clampVariants(variants);
+  const items = Array.from({ length: count }, (_, index) => planSlides(workspace, prompt, index));
+  return {
+    variants: items,
+    selectedVariant: 0,
+    ...items[0]
+  };
+}
+
 module.exports = {
   inferModeFromPrompt,
   inferSlideCount,
-  planSlides
+  clampVariants,
+  planSlides,
+  planContentVariants
 };

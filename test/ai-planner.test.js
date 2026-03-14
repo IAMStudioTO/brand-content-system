@@ -2,7 +2,13 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { workspace } = require('../src/data/seed');
-const { inferModeFromPrompt, inferSlideCount, planSlides } = require('../src/services/ai-planner');
+const {
+  inferModeFromPrompt,
+  inferSlideCount,
+  clampVariants,
+  planSlides,
+  planContentVariants
+} = require('../src/services/ai-planner');
 const { validateGeneratedContent } = require('../src/services/validator');
 
 test('inferModeFromPrompt detects carousel keywords', () => {
@@ -16,6 +22,12 @@ test('inferSlideCount extracts slide number with limits', () => {
   assert.equal(inferSlideCount('singolo', 'single'), 1);
 });
 
+test('clampVariants keeps variants in [1..3]', () => {
+  assert.equal(clampVariants(0), 1);
+  assert.equal(clampVariants(2), 2);
+  assert.equal(clampVariants(8), 3);
+});
+
 test('planSlides creates valid payload for carousel', () => {
   const planned = planSlides(workspace, 'Crea un carosello LinkedIn di 5 slide per spiegare la fiducia nel brand');
   assert.equal(planned.contentMode, 'carousel');
@@ -24,4 +36,11 @@ test('planSlides creates valid payload for carousel', () => {
 
   const validation = validateGeneratedContent(workspace, planned);
   assert.deepEqual(validation, { ok: true });
+});
+
+test('planContentVariants returns multiple variants', () => {
+  const planned = planContentVariants(workspace, 'Crea un carosello di 5 slide', 3);
+  assert.equal(planned.variants.length, 3);
+  assert.equal(planned.selectedVariant, 0);
+  assert.equal(planned.numberOfSlides, 5);
 });

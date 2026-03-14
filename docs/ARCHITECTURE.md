@@ -11,10 +11,10 @@ Architettura cloud-first composta da 4 sottosistemi:
 Obiettivo: composizione visuale controllata da regole, non design generation libera.
 
 ## 2. High-level component diagram
-- **Admin** → Figma + Plugin → API `/templates/sync` + `/assets/svg/upload`
-- **Client** → Workspace UI → API `/content/generate`
+- **Admin** → Figma + Plugin → API `/admin/templates/sync` + `/admin/svg-assets`
+- **Client** → Workspace UI → API `/client/content/*` (generate/list/edit/preview/export/versioning)
 - **API** → DB (metadata), Storage (SVG/image), AI provider
-- **Renderer** ← generated plan + template geometry + assets catalog
+- **Renderer** ← selected variant plan + template geometry + assets catalog
 
 ## 3. Bounded contexts
 ### 3.1 Template Ingestion
@@ -45,6 +45,15 @@ Responsabilità:
 - iniezione content assignments
 - output preview/export
 
+
+### 3.5 Client Content Lifecycle
+Responsabilità:
+- gestire storico contenuti (`list/get/delete`)
+- cambiare variante attiva
+- applicare editing controllato (`text`/`svg`) con validazione
+- creare snapshot versioni e restore
+- supportare export payload
+
 ## 4. Core design principles
 1. **Determinismo visuale**: niente ricostruzione HTML/CSS generica da Figma.
 2. **Semantic layer contract**: naming layer come API di design.
@@ -60,6 +69,7 @@ Responsabilità:
 6. AI restituisce JSON strutturato.
 7. Validatore server applica policy e fallback.
 8. Renderer compone anteprima e output.
+9. Utente può salvare snapshot versione, ripristinare, duplicare o eliminare contenuto.
 
 ## 6. Validation pipeline
 ### 6.1 Input validation
