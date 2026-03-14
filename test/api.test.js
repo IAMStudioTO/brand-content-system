@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + variant-select + preview + export flow', async () => {
+test('API generate + get + list + variant-select + preview + export + delete flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -64,6 +64,16 @@ test('API generate + get + variant-select + preview + export flow', async () => 
 
     assert.equal(getContent.status, 200);
     assert.equal(getContent.body.variants.length, 3);
+
+    const listBeforeDelete = await requestJson({
+      method: 'GET',
+      port,
+      path: '/api/v1/client/contents?workspaceId=ws_acme'
+    });
+
+    assert.equal(listBeforeDelete.status, 200);
+    assert.ok(Array.isArray(listBeforeDelete.body.items));
+    assert.ok(listBeforeDelete.body.items.find((item) => item.id === generation.body.contentId));
 
     const selectVariant = await requestJson({
       method: 'PATCH',
@@ -111,6 +121,23 @@ test('API generate + get + variant-select + preview + export flow', async () => 
 
     assert.equal(invalidVariant.status, 422);
     assert.equal(invalidVariant.body.error, '422_VARIANT_INDEX_OUT_OF_RANGE');
+
+    const deleted = await requestJson({
+      method: 'DELETE',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}`
+    });
+
+    assert.equal(deleted.status, 200);
+    assert.equal(deleted.body.deleted, true);
+
+    const getDeleted = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}`
+    });
+
+    assert.equal(getDeleted.status, 404);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

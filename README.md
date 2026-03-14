@@ -20,9 +20,11 @@ Endpoint disponibili:
 
 ### Client
 - `POST /api/v1/client/content/generate` (supporto `variants` 1..3)
+- `GET /api/v1/client/contents?workspaceId=ws_acme`
 - `GET /api/v1/client/content/:contentId`
 - `PATCH /api/v1/client/content/:contentId/variant` (selezione variante attiva)
 - `GET /api/v1/client/content/:contentId/preview`
+- `DELETE /api/v1/client/content/:contentId`
 - `POST /api/v1/client/content/:contentId/export`
 - `GET /api/v1/client/exports/:exportId.json`
 
@@ -33,7 +35,8 @@ Il flusso implementato include:
 4. validazione vincoli (template/slot/testo/SVG)
 5. payload render-ready per preview
 6. gestione varianti contenuto (fino a 3)
-7. export JSON in-memory
+7. storico contenuti in-memory (list + delete)
+8. export JSON in-memory
 
 ## Quickstart
 Prerequisiti: Node.js 18+

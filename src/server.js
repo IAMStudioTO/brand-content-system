@@ -9,7 +9,8 @@ const { addSvgAsset, setSvgAssetActivation } = require('./services/svg-library')
 
 const state = {
   contents: new Map(),
-  exports: new Map()
+  exports: new Map(),
+  contentOrder: []
 };
 
 function sendJson(res, status, payload) {
@@ -149,11 +150,13 @@ async function handler(req, res) {
 
       const contentId = generateId('cnt');
       const stored = {
+        id: contentId,
         ...generated,
         workspaceId: workspace.id,
         createdAt: new Date().toISOString()
       };
       state.contents.set(contentId, stored);
+      state.contentOrder.unshift(contentId);
 
       return sendJson(res, 200, { contentId, ...stored });
     } catch (error) {
@@ -166,6 +169,37 @@ async function handler(req, res) {
     const content = getContentOr404(getContentMatch[1], res);
     if (!content) return;
     return sendJson(res, 200, content);
+  }
+
+  if (req.method === 'GET' && path === '/api/v1/client/contents') {
+    const workspaceId = requestUrl.searchParams.get('workspaceId');
+    if (workspaceId !== workspace.id) {
+      return sendJson(res, 404, { error: 'Workspace not found' });
+    }
+
+    const items = state.contentOrder
+      .map((id) => state.contents.get(id))
+      .filter(Boolean)
+      .map((content) => ({
+        id: content.id,
+        createdAt: content.createdAt,
+        contentMode: content.contentMode,
+        numberOfSlides: content.numberOfSlides,
+        numberOfVariants: content.variants.length,
+        selectedVariant: content.selectedVariant
+      }));
+
+    return sendJson(res, 200, { items });
+  }
+
+  const deleteContentMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)$/);
+  if (req.method === 'DELETE' && deleteContentMatch) {
+    const content = getContentOr404(deleteContentMatch[1], res);
+    if (!content) return;
+
+    state.contents.delete(deleteContentMatch[1]);
+    state.contentOrder = state.contentOrder.filter((id) => id !== deleteContentMatch[1]);
+    return sendJson(res, 200, { deleted: true, contentId: deleteContentMatch[1] });
   }
 
   const selectVariantMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/variant$/);
