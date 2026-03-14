@@ -77,6 +77,7 @@ figma.ui.onmessage = async (msg) => {
             type: "SELECTION_RESULT",
             ok: true,
             payload: {
+                templateId: frame.name,
                 frameName: frame.name,
                 width: Math.round(frame.width),
                 height: Math.round(frame.height),
