@@ -149,7 +149,10 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
 
     assert.equal(exportedPayload.status, 200);
     assert.equal(exportedPayload.body.variants.length, 3);
+<<<<<<< HEAD
     assert.equal(exportedPayload.body.variants[2].slides[0].textAssignments.headline, 'Nuova headline variante 3');
+=======
+>>>>>>> origin/work
 
     const createdVersion = await requestJson({
       method: 'POST',
@@ -187,6 +190,7 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
 
     assert.equal(postVersionEdit.status, 200);
 
+<<<<<<< HEAD
     const exportedPayloadAfterEdit = await requestJson({
       method: 'GET',
       port,
@@ -196,6 +200,8 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
     assert.equal(exportedPayloadAfterEdit.status, 200);
     assert.equal(exportedPayloadAfterEdit.body.variants[2].slides[0].textAssignments.headline, 'Nuova headline variante 3');
 
+=======
+>>>>>>> origin/work
     const restoreVersion = await requestJson({
       method: 'POST',
       port,
@@ -288,6 +294,7 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
     assert.ok(duplicated.body.contentId);
     assert.notEqual(duplicated.body.contentId, generation.body.contentId);
 
+<<<<<<< HEAD
     const duplicateTextUpdate = await requestJson({
       method: 'PATCH',
       port,
@@ -318,6 +325,8 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
       'Headline solo duplicato'
     );
 
+=======
+>>>>>>> origin/work
     const listAfterDuplicate = await requestJson({
       method: 'GET',
       port,
