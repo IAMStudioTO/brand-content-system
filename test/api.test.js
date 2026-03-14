@@ -410,6 +410,16 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(getAfterRestore.status, 200);
 
+    const restoreNotDeleted = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/restore`,
+      body: { workspaceId: 'ws_acme' }
+    });
+
+    assert.equal(restoreNotDeleted.status, 409);
+    assert.equal(restoreNotDeleted.body.error, '409_CONTENT_NOT_DELETED');
+
 
     const listAfterDelete = await requestJson({
       method: 'GET',

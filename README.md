@@ -34,6 +34,7 @@ Endpoint disponibili:
 - `POST /api/v1/client/content/:contentId/duplicate`
 - `DELETE /api/v1/client/content/:contentId` (soft-delete)
 - `POST /api/v1/client/content/:contentId/restore` (ripristino soft-delete)
+  - ritorna `409_CONTENT_NOT_DELETED` se il contenuto non è soft-deleted
 - `POST /api/v1/client/content/:contentId/export`
 - `GET /api/v1/client/exports/:exportId.json`
 - `POST /api/v1/client/content/:contentId/versions` (snapshot versione)
