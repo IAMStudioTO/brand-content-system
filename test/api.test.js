@@ -175,6 +175,10 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(exportedPayload.status, 200);
     assert.equal(exportedPayload.body.variants.length, 3);
+<<<<<<< HEAD
+    assert.equal(exportedPayload.body.variants[2].slides[0].textAssignments.headline, 'Nuova headline variante 3');
+=======
+>>>>>>> origin/work
 
     const createdVersion = await requestJson({
       method: 'POST',
@@ -212,6 +216,18 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
 
     assert.equal(postVersionEdit.status, 200);
 
+<<<<<<< HEAD
+    const exportedPayloadAfterEdit = await requestJson({
+      method: 'GET',
+      port,
+      path: exported.body.downloadUrl
+    });
+
+    assert.equal(exportedPayloadAfterEdit.status, 200);
+    assert.equal(exportedPayloadAfterEdit.body.variants[2].slides[0].textAssignments.headline, 'Nuova headline variante 3');
+
+=======
+>>>>>>> origin/work
     const restoreVersion = await requestJson({
       method: 'POST',
       port,
@@ -326,6 +342,39 @@ test('API generate + get + list + variant-select + text/svg/image-edit + preview
     assert.ok(duplicated.body.contentId);
     assert.notEqual(duplicated.body.contentId, generation.body.contentId);
 
+<<<<<<< HEAD
+    const duplicateTextUpdate = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${duplicated.body.contentId}/text`,
+      body: {
+        updates: [
+          {
+            slideIndex: 0,
+            textAssignments: {
+              headline: 'Headline solo duplicato'
+            }
+          }
+        ]
+      }
+    });
+
+    assert.equal(duplicateTextUpdate.status, 200);
+
+    const originalAfterDuplicateEdit = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}`
+    });
+
+    assert.equal(originalAfterDuplicateEdit.status, 200);
+    assert.notEqual(
+      originalAfterDuplicateEdit.body.variants[2].slides[0].textAssignments.headline,
+      'Headline solo duplicato'
+    );
+
+=======
+>>>>>>> origin/work
     const listAfterDuplicate = await requestJson({
       method: 'GET',
       port,

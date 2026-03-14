@@ -65,8 +65,14 @@ function parseVariantIndex(input) {
 
 
 function cloneContent(content, nextId) {
+<<<<<<< HEAD
+  const cloned = cloneDeep(content);
+  return {
+    ...cloned,
+=======
   return {
     ...content,
+>>>>>>> origin/work
     id: nextId,
     createdAt: new Date().toISOString()
   };
@@ -537,7 +543,11 @@ async function handler(req, res) {
 
     const exportId = generateId('exp');
     const downloadUrl = `/api/v1/client/exports/${exportId}.json`;
+<<<<<<< HEAD
+    state.exports.set(exportId, { content: cloneDeep(content), downloadUrl });
+=======
     state.exports.set(exportId, { content, downloadUrl });
+>>>>>>> origin/work
     return sendJson(res, 201, { exportId, downloadUrl });
   }
 
