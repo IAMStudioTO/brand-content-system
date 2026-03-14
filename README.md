@@ -32,6 +32,7 @@ Endpoint disponibili:
 - `GET /api/v1/client/exports/:exportId.json`
 - `POST /api/v1/client/content/:contentId/versions` (snapshot versione)
 - `GET /api/v1/client/content/:contentId/versions`
+- `POST /api/v1/client/content/:contentId/versions/:versionId/restore`
 
 Il flusso implementato include:
 1. pianificazione contenuto (`single` vs `carousel`)
@@ -45,6 +46,7 @@ Il flusso implementato include:
 9. storico contenuti in-memory (list + duplicate + delete)
 10. export JSON in-memory
 11. snapshot versioni contenuto in-memory
+12. restore versione salvata
 
 ## Quickstart
 Prerequisiti: Node.js 18+

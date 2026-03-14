@@ -308,6 +308,35 @@ async function handler(req, res) {
     return sendJson(res, 200, { items: versions });
   }
 
+  const restoreVersionMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/versions\/([^/]+)\/restore$/);
+  if (req.method === 'POST' && restoreVersionMatch) {
+    const content = getContentOr404(restoreVersionMatch[1], res);
+    if (!content) return;
+
+    const versions = getContentVersions(restoreVersionMatch[1]);
+    const version = versions.find((v) => v.id === restoreVersionMatch[2]);
+    if (!version) {
+      return sendJson(res, 404, { error: 'Version not found' });
+    }
+
+    const restored = cloneDeep(version.data);
+    restored.id = content.id;
+    restored.createdAt = content.createdAt;
+
+    const validation = validateGeneratedContent(workspace, restored.variants[restored.selectedVariant] || restored.variants[0]);
+    if (!validation.ok) {
+      return sendJson(res, 422, { error: validation.code });
+    }
+
+    state.contents.set(restoreVersionMatch[1], restored);
+
+    return sendJson(res, 200, {
+      restored: true,
+      versionId: version.id,
+      selectedVariant: restored.selectedVariant
+    });
+  }
+
   const duplicateContentMatch = path.match(/^\/api\/v1\/client\/content\/([^/]+)\/duplicate$/);
   if (req.method === 'POST' && duplicateContentMatch) {
     const content = getContentOr404(duplicateContentMatch[1], res);

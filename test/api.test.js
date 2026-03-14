@@ -35,7 +35,7 @@ function requestJson({ method, port, path, body }) {
   });
 }
 
-test('API generate + get + list + variant-select + text/svg-edit + preview + export + versions + duplicate + delete flow', async () => {
+test('API generate + get + list + variant-select + text/svg-edit + preview + export + versions + restore + duplicate + delete flow', async () => {
   const server = startServer(0);
   const port = server.address().port;
 
@@ -170,6 +170,40 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
     assert.equal(versions.body.items.length, 1);
     assert.equal(versions.body.items[0].name, 'Versione dopo editing');
 
+    const postVersionEdit = await requestJson({
+      method: 'PATCH',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/text`,
+      body: {
+        updates: [
+          {
+            slideIndex: 0,
+            textAssignments: { headline: 'Titolo temporaneo da annullare' }
+          }
+        ]
+      }
+    });
+
+    assert.equal(postVersionEdit.status, 200);
+
+    const restoreVersion = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/versions/${versions.body.items[0].id}/restore`
+    });
+
+    assert.equal(restoreVersion.status, 200);
+    assert.equal(restoreVersion.body.restored, true);
+
+    const previewAfterRestore = await requestJson({
+      method: 'GET',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/preview`
+    });
+
+    assert.equal(previewAfterRestore.status, 200);
+    assert.equal(previewAfterRestore.body.slides[0].layers.text.headline, 'Nuova headline variante 3');
+
     const invalidVersion = await requestJson({
       method: 'POST',
       port,
@@ -179,6 +213,14 @@ test('API generate + get + list + variant-select + text/svg-edit + preview + exp
 
     assert.equal(invalidVersion.status, 400);
     assert.equal(invalidVersion.body.error, '400_VERSION_NAME_REQUIRED');
+
+    const missingVersionRestore = await requestJson({
+      method: 'POST',
+      port,
+      path: `/api/v1/client/content/${generation.body.contentId}/versions/ver_missing/restore`
+    });
+
+    assert.equal(missingVersionRestore.status, 404);
 
     const invalidVariant = await requestJson({
       method: 'PATCH',
