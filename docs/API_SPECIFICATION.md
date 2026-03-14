@@ -127,12 +127,101 @@ Errori business:
 - `422_SVG_INCOMPATIBLE`
 - `422_TEXT_LIMIT_EXCEEDED`
 
-## 6) Client — Preview & export
+## 6) Client — Lifecycle, editing, preview, export
+### GET `/client/contents?workspaceId=...`
+Lista contenuti generati (metadata sintetici: id, createdAt, mode, varianti, selectedVariant).
+
+### GET `/client/content/:contentId`
+Dettaglio contenuto completo con `variants[]`.
+
+### PATCH `/client/content/:contentId/variant`
+Seleziona variante attiva.
+
+Request:
+```json
+{ "variantIndex": 1 }
+```
+
+Errori:
+- `422_VARIANT_INDEX_OUT_OF_RANGE`
+
+### PATCH `/client/content/:contentId/text`
+Editing testo controllato sulla variante attiva.
+
+Request:
+```json
+{
+  "updates": [
+    {
+      "slideIndex": 0,
+      "textAssignments": {
+        "headline": "Nuova headline"
+      }
+    }
+  ]
+}
+```
+
+Errori:
+- `400_TEXT_UPDATES_INVALID`
+- `422_SLIDE_INDEX_INVALID`
+- `422_TEXT_LIMIT_EXCEEDED`
+- `422_SLOT_ASSIGNMENT_INVALID`
+
+### PATCH `/client/content/:contentId/svg`
+Editing SVG controllato sulla variante attiva.
+
+Request:
+```json
+{
+  "updates": [
+    {
+      "slideIndex": 0,
+      "svgAssignments": {
+        "accent_bottom": "svg_accent_02"
+      }
+    }
+  ]
+}
+```
+
+Errori:
+- `400_SVG_UPDATES_INVALID`
+- `422_SLIDE_INDEX_INVALID`
+- `422_SLOT_ASSIGNMENT_INVALID`
+- `422_SVG_INCOMPATIBLE`
+
 ### GET `/client/content/:contentId/preview`
-Ritorna payload render-ready per frontend.
+Ritorna payload render-ready della variante attiva.
 
 ### POST `/client/content/:contentId/export`
-Crea export (es. PNG/PDF) e ritorna URL firmato.
+Crea export e ritorna URL download.
+
+### POST `/client/content/:contentId/duplicate`
+Duplica contenuto con nuovo `contentId`.
+
+### DELETE `/client/content/:contentId`
+Elimina contenuto e relativo storico versioni.
+
+### POST `/client/content/:contentId/versions`
+Crea snapshot versione nominata.
+
+Request:
+```json
+{ "name": "Versione dopo editing" }
+```
+
+Errori:
+- `400_VERSION_NAME_REQUIRED`
+
+### GET `/client/content/:contentId/versions`
+Lista versioni salvate.
+
+### POST `/client/content/:contentId/versions/:versionId/restore`
+Ripristina una versione salvata sul contenuto corrente.
+
+Errori:
+- `404 Version not found`
 
 ## 7) AI internal contract (server-side)
 Il backend invia all’AI:
