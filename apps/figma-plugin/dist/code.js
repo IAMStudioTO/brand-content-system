@@ -215,7 +215,11 @@ figma.ui.onmessage = async (msg) => {
             figma.ui.postMessage({
                 type: "SYNC_RESULT",
                 ok: false,
-                error: error instanceof Error ? error.message : "Errore sconosciuto durante la sync."
+                error: error instanceof Error
+                    ? error.message
+                    : typeof error === "string"
+                        ? error
+                        : JSON.stringify(error)
             });
             return;
         }
