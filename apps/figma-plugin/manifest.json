@@ -5,5 +5,11 @@
   "main": "dist/code.js",
   "ui": "dist/ui.html",
   "editorType": ["figma"],
-  "permissions": ["currentuser"]
+  "permissions": ["currentuser"],
+  "networkAccess": {
+    "allowedDomains": [
+      "https://musical-trout-gvq7g6v7xjx2v7w-3000.app.github.dev"
+    ],
+    "reasoning": "Serve per sincronizzare i template Figma verso il backend Brand Content System esposto da GitHub Codespaces."
+  }
 }
