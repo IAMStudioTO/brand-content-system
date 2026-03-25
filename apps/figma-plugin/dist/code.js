@@ -199,7 +199,7 @@ figma.ui.onmessage = async (msg) => {
             try {
                 responseJson = JSON.parse(responseText);
             }
-            catch {
+            catch (parseError) {
                 responseJson = { raw: responseText };
             }
             figma.ui.postMessage({
