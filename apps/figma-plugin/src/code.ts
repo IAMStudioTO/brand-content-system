@@ -21,6 +21,22 @@ type ExtractedLayer = {
   zIndex: number;
 };
 
+type BackendLayer =
+  | {
+      name: string;
+      type: "text";
+      rules: { maxChars: number };
+    }
+  | {
+      name: string;
+      type: "image";
+    }
+  | {
+      name: string;
+      type: "svg";
+      assetUrl: string;
+    };
+
 function parseLayerName(layerName: string): ParsedLayerName {
   const name = layerName.trim().toLowerCase();
 
@@ -68,15 +84,81 @@ function summarizeAvailableSlots(layers: ExtractedLayer[]): Record<string, numbe
 
   for (const layer of layers) {
     if (!layer.semanticRole) continue;
-
-    if (!counts[layer.semanticRole]) {
-      counts[layer.semanticRole] = 0;
-    }
-
-    counts[layer.semanticRole] += 1;
+    counts[layer.semanticRole] = (counts[layer.semanticRole] || 0) + 1;
   }
 
   return counts;
+}
+
+function toBackendLayer(layer: ExtractedLayer): BackendLayer | null {
+  if (!layer.semanticRole) return null;
+
+  if (layer.semanticRole === "headline") {
+    return {
+      name: "text/headline",
+      type: "text",
+      rules: { maxChars: 120 }
+    };
+  }
+
+  if (layer.semanticRole === "body") {
+    return {
+      name: "text/body",
+      type: "text",
+      rules: { maxChars: 400 }
+    };
+  }
+
+  if (layer.semanticRole === "image") {
+    const suffix = layer.slotIndex ? `_${layer.slotIndex}` : "";
+    return {
+      name: `image/image${suffix}`,
+      type: "image"
+    };
+  }
+
+  if (
+    layer.semanticRole === "background" ||
+    layer.semanticRole === "logo" ||
+    layer.semanticRole === "cta" ||
+    layer.semanticRole === "component" ||
+    layer.semanticRole === "decoration"
+  ) {
+    const suffix = layer.slotIndex ? `_${layer.slotIndex}` : "";
+    const slotName = `${layer.semanticRole}${suffix}`;
+
+    return {
+      name: `svg/${slotName}`,
+      type: "svg",
+      assetUrl: `https://example.com/${slotName}.svg`
+    };
+  }
+
+  return null;
+}
+
+function buildBackendPayload(
+  workspaceId: string,
+  frameName: string,
+  width: number,
+  height: number,
+  layers: ExtractedLayer[]
+) {
+  const backendLayers = layers
+    .map(toBackendLayer)
+    .filter((layer): layer is BackendLayer => layer !== null);
+
+  return {
+    workspaceId,
+    template: {
+      id: frameName,
+      name: frameName,
+      width,
+      height,
+      roles: ["single"],
+      layers: backendLayers
+    }
+  };
 }
 
 figma.ui.onmessage = async (msg) => {
@@ -106,18 +188,26 @@ figma.ui.onmessage = async (msg) => {
     const frame = node as FrameNode | ComponentNode | InstanceNode;
     const layers = extractLayers(frame);
     const availableSlots = summarizeAvailableSlots(layers);
+    const backendPayload = buildBackendPayload(
+      "ws_acme",
+      frame.name,
+      Math.round(frame.width),
+      Math.round(frame.height),
+      layers
+    );
 
     figma.ui.postMessage({
       type: "SELECTION_RESULT",
       ok: true,
-      payload: {
+      payload: { testFlag: "🔥NUOVA_VERSIONE🔥",
         templateId: frame.name,
         frameName: frame.name,
         width: Math.round(frame.width),
         height: Math.round(frame.height),
         layerCount: layers.length,
         availableSlots,
-        layers
+        layers,
+        backendPayload
       }
     });
     return;
