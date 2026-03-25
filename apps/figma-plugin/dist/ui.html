@@ -26,6 +26,22 @@
       color: #bdb7ae;
       line-height: 1.5;
     }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+      color: #d9d1c7;
+    }
+    input {
+      width: 100%;
+      border: 1px solid #333;
+      background: #1b1b1b;
+      color: #f5f5f5;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
     button {
       width: 100%;
       border: 0;
@@ -43,24 +59,47 @@
       background: #2a2a2a;
       color: #f0ede8;
     }
+    .tertiary {
+      background: #355caa;
+      color: #fff;
+    }
     pre {
       background: #1b1b1b;
       border-radius: 10px;
       padding: 12px;
       overflow: auto;
-      min-height: 220px;
+      min-height: 260px;
       white-space: pre-wrap;
       word-break: break-word;
       color: #f5f5f5;
+    }
+    .hint {
+      font-size: 12px;
+      color: #9d978f;
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Brand Content System</h1>
-    <p>Plugin MVP per leggere il frame selezionato e i suoi layer.</p>
+    <p>Scansiona il frame selezionato e sincronizza il template verso il backend.</p>
+
+    <label>
+      Backend URL
+      <input id="backendUrl" type="text" value="http://localhost:3000" />
+    </label>
+
+    <label>
+      Workspace ID
+      <input id="workspaceId" type="text" value="ws_acme" />
+    </label>
+
+    <p class="hint">
+      Se il backend non gira sul tuo computer locale, qui devi mettere l’URL realmente raggiungibile dalla macchina dove gira Figma.
+    </p>
 
     <button id="scan" class="primary">Scansiona frame selezionato</button>
+    <button id="sync" class="tertiary">Sincronizza template</button>
     <button id="close" class="secondary">Chiudi</button>
 
     <pre id="output">In attesa...</pre>
@@ -69,13 +108,29 @@
   <script>
     const output = document.getElementById("output");
     const scanBtn = document.getElementById("scan");
+    const syncBtn = document.getElementById("sync");
     const closeBtn = document.getElementById("close");
+    const backendUrlInput = document.getElementById("backendUrl");
+    const workspaceIdInput = document.getElementById("workspaceId");
 
     scanBtn.onclick = () => {
       parent.postMessage(
         {
           pluginMessage: {
             type: "SCAN_SELECTION"
+          }
+        },
+        "*"
+      );
+    };
+
+    syncBtn.onclick = () => {
+      parent.postMessage(
+        {
+          pluginMessage: {
+            type: "SYNC_TEMPLATE",
+            backendUrl: backendUrlInput.value,
+            workspaceId: workspaceIdInput.value
           }
         },
         "*"

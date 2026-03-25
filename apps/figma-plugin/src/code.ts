@@ -1,7 +1,7 @@
 // Brand Content System — Figma Plugin
-// Main thread: accesso alla Figma Plugin API
+// Main thread: accesso alla Figma Plugin API + sync backend
 
-figma.showUI(__html__, { width: 420, height: 640 });
+figma.showUI(__html__, { width: 460, height: 760 });
 
 type ParsedLayerName = {
   semanticRole: string | null;
@@ -36,6 +36,18 @@ type BackendLayer =
       type: "svg";
       assetUrl: string;
     };
+
+type BackendPayload = {
+  workspaceId: string;
+  template: {
+    id: string;
+    name: string;
+    width: number;
+    height: number;
+    roles: string[];
+    layers: BackendLayer[];
+  };
+};
 
 function parseLayerName(layerName: string): ParsedLayerName {
   const name = layerName.trim().toLowerCase();
@@ -143,7 +155,7 @@ function buildBackendPayload(
   width: number,
   height: number,
   layers: ExtractedLayer[]
-) {
+): BackendPayload {
   const backendLayers = layers
     .map(toBackendLayer)
     .filter((layer): layer is BackendLayer => layer !== null);
@@ -161,31 +173,47 @@ function buildBackendPayload(
   };
 }
 
+function getSelectedFrameOrError():
+  | { ok: true; frame: FrameNode | ComponentNode | InstanceNode }
+  | { ok: false; error: string } {
+  const selection = figma.currentPage.selection;
+
+  if (!selection || selection.length === 0) {
+    return {
+      ok: false,
+      error: "Seleziona un Frame, Component o Instance in Figma."
+    };
+  }
+
+  const node = selection[0];
+
+  if (node.type !== "FRAME" && node.type !== "COMPONENT" && node.type !== "INSTANCE") {
+    return {
+      ok: false,
+      error: "Seleziona un FRAME, COMPONENT o INSTANCE."
+    };
+  }
+
+  return {
+    ok: true,
+    frame: node as FrameNode | ComponentNode | InstanceNode
+  };
+}
+
 figma.ui.onmessage = async (msg) => {
   if (msg.type === "SCAN_SELECTION") {
-    const selection = figma.currentPage.selection;
+    const selected = getSelectedFrameOrError();
 
-    if (!selection || selection.length === 0) {
+    if (!selected.ok) {
       figma.ui.postMessage({
         type: "SELECTION_RESULT",
         ok: false,
-        error: "Seleziona un Frame, Component o Instance in Figma."
+        error: selected.error
       });
       return;
     }
 
-    const node = selection[0];
-
-    if (node.type !== "FRAME" && node.type !== "COMPONENT" && node.type !== "INSTANCE") {
-      figma.ui.postMessage({
-        type: "SELECTION_RESULT",
-        ok: false,
-        error: "Seleziona un FRAME, COMPONENT o INSTANCE."
-      });
-      return;
-    }
-
-    const frame = node as FrameNode | ComponentNode | InstanceNode;
+    const frame = selected.frame;
     const layers = extractLayers(frame);
     const availableSlots = summarizeAvailableSlots(layers);
     const backendPayload = buildBackendPayload(
@@ -199,7 +227,8 @@ figma.ui.onmessage = async (msg) => {
     figma.ui.postMessage({
       type: "SELECTION_RESULT",
       ok: true,
-      payload: { testFlag: "🔥NUOVA_VERSIONE🔥",
+      payload: {
+        testFlag: "🔥NUOVA_VERSIONE🔥",
         templateId: frame.name,
         frameName: frame.name,
         width: Math.round(frame.width),
@@ -211,6 +240,86 @@ figma.ui.onmessage = async (msg) => {
       }
     });
     return;
+  }
+
+  if (msg.type === "SYNC_TEMPLATE") {
+    try {
+      const backendUrl = String(msg.backendUrl || "").trim();
+      const workspaceId = String(msg.workspaceId || "").trim();
+
+      if (!backendUrl) {
+        figma.ui.postMessage({
+          type: "SYNC_RESULT",
+          ok: false,
+          error: "Backend URL mancante."
+        });
+        return;
+      }
+
+      if (!workspaceId) {
+        figma.ui.postMessage({
+          type: "SYNC_RESULT",
+          ok: false,
+          error: "Workspace ID mancante."
+        });
+        return;
+      }
+
+      const selected = getSelectedFrameOrError();
+
+      if (!selected.ok) {
+        figma.ui.postMessage({
+          type: "SYNC_RESULT",
+          ok: false,
+          error: selected.error
+        });
+        return;
+      }
+
+      const frame = selected.frame;
+      const layers = extractLayers(frame);
+      const backendPayload = buildBackendPayload(
+        workspaceId,
+        frame.name,
+        Math.round(frame.width),
+        Math.round(frame.height),
+        layers
+      );
+
+      const normalizedBaseUrl = backendUrl.replace(/\/$/, "");
+      const response = await fetch(`${normalizedBaseUrl}/api/v1/admin/templates/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(backendPayload)
+      });
+
+      const responseText = await response.text();
+
+      let responseJson: unknown = null;
+      try {
+        responseJson = JSON.parse(responseText);
+      } catch {
+        responseJson = { raw: responseText };
+      }
+
+      figma.ui.postMessage({
+        type: "SYNC_RESULT",
+        ok: response.ok,
+        status: response.status,
+        request: backendPayload,
+        response: responseJson
+      });
+      return;
+    } catch (error) {
+      figma.ui.postMessage({
+        type: "SYNC_RESULT",
+        ok: false,
+        error: error instanceof Error ? error.message : "Errore sconosciuto durante la sync."
+      });
+      return;
+    }
   }
 
   if (msg.type === "CLOSE_PLUGIN") {
